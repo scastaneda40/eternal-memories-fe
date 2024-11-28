@@ -120,7 +120,8 @@ const MemoryChat = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 10 // Add this line
+},
     messageBubble: { marginVertical: 5, padding: 10, borderRadius: 10, maxWidth: "80%" },
     userBubble: { backgroundColor: "#007AFF", alignSelf: "flex-end", color: "#fff" },
     aiBubble: { backgroundColor: "#f0f0f0", alignSelf: "flex-start", color: "#333" },
