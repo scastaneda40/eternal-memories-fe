@@ -10,9 +10,9 @@ const Stack = createStackNavigator();
 export default function Layout() {
     return (
       <ProfileProvider>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: true }}>
             {/* Main Tabs */}
-            <Stack.Screen name="MainTabs" component={TabsLayout} />
+            <Stack.Screen name="MainTabs" component={TabsLayout} options={{ headerShown: false }} />
 
             <Stack.Screen name="MemoryChat" component={MemoryChat} />
 
