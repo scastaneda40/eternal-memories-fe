@@ -1,59 +1,55 @@
-import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { createStackNavigator } from "@react-navigation/stack";
+import { Tabs } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import LovedOneProfile from "../../components/LovedOneProfile"; // Adjust path if necessary
+import { ProfileProvider } from "../../constants/ProfileContext";
+import MemoryChat from "./MemoryChat"
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+const Stack = createStackNavigator();
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+export default function Layout() {
+    return (
+      <ProfileProvider>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {/* Main Tabs */}
+            <Stack.Screen name="MainTabs" component={TabsLayout} />
+
+            <Stack.Screen name="MemoryChat" component={MemoryChat} />
+
+            {/* Loved One Profile Screen */}
+            <Stack.Screen name="LovedOneProfile" component={LovedOneProfile} />
+        </Stack.Navigator>
+        </ProfileProvider>
+    );
 }
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function TabsLayout() {
+    return (
+        <Tabs
+            screenOptions={({ route }) => ({
+                tabBarIcon: ({ color, size }) => {
+                    let iconName;
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+                    if (route.name === "index") {
+                        iconName = "home";
+                    } else if (route.name === "MemoryUpload") {
+                        iconName = "cloud-upload";
+                    } else if (route.name === "MemoryVault") {
+                        iconName = "albums";
+                    } else if (route.name === "MemoryChat") {
+                        iconName = "chatbubbles";
+                    }
+
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                tabBarActiveTintColor: "blue",
+                tabBarInactiveTintColor: "gray",
+            })}
+        >
+            <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
+            <Tabs.Screen name="MemoryUpload" options={{ title: "Upload Memory" }} />
+            <Tabs.Screen name="MemoryVault" options={{ title: "Memory Vault" }} />
+            <Tabs.Screen name="MemoryChat" options={{ title: "Memory Chat" }} />
+        </Tabs>
+    );
 }

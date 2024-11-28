@@ -14,13 +14,18 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to upload memories."
+      },
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eternalmoments.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.eternalmoments.app"
     },
     "web": {
       "bundler": "metro",
