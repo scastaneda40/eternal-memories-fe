@@ -4,11 +4,13 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import LovedOneProfile from "../../components/LovedOneProfile"; // Adjust path if necessary
 import { ProfileProvider } from "../../constants/ProfileContext";
 import MemoryChat from "./MemoryChat"
+import { UserProvider } from "@/constants/UserContext";
 
 const Stack = createStackNavigator();
 
 export default function Layout() {
     return (
+      <UserProvider>
       <ProfileProvider>
         <Stack.Navigator screenOptions={{ headerShown: true }}>
             {/* Main Tabs */}
@@ -20,6 +22,7 @@ export default function Layout() {
             <Stack.Screen name="LovedOneProfile" component={LovedOneProfile} />
         </Stack.Navigator>
         </ProfileProvider>
+        </UserProvider>
     );
 }
 

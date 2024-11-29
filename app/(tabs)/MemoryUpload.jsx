@@ -4,21 +4,25 @@ import {
     Button,
     Image,
     TextInput,
-    Text,
     Alert,
     StyleSheet,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { supabase } from "../../constants/supabaseClient";
-import { useNavigation } from "expo-router";
-import Toast from "react-native-toast-message"; // Import Toast
+import Toast from "react-native-toast-message";
+import { useProfile } from "../../constants/ProfileContext";
+import { useUser } from "../../constants/UserContext";
 
-const MemoryUpload = () => {
+const MemoryUpload = ({ route }) => {
     const [file, setFile] = useState(null);
     const [tags, setTags] = useState("");
     const [description, setDescription] = useState("");
     const [date, setDate] = useState("");
-    const navigation = useNavigation();
+    const { userId } = useUser();
+    const { profile: globalProfile } = useProfile();
+    const passedProfile = route?.params?.profile;
+
+    // Use profile from navigation or fallback to context
+    const profile = passedProfile || globalProfile;
 
     useEffect(() => {
         (async () => {
@@ -35,7 +39,7 @@ const MemoryUpload = () => {
     const pickImage = async () => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ["images"],
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 quality: 1,
             });
@@ -49,70 +53,61 @@ const MemoryUpload = () => {
     };
 
     const handleUpload = async () => {
-        if (!file) return Toast.show({ type: "error", text1: "Error", text2: "Please select a file!" });
-        if (!tags || !description || !date)
-            return Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: "Please fill in all fields!",
-            });
-    
-        const filePath = `uploads/${Date.now()}_${file.fileName}`;
-    
+        if (!file) {
+            return Toast.show({ type: "error", text1: "Error", text2: "Please select a file!" });
+        }
+        if (!tags || !description || !date) {
+            return Toast.show({ type: "error", text1: "Error", text2: "Please fill in all fields!" });
+        }
+        if (!profile || !profile.id) {
+            return Toast.show({ type: "error", text1: "Error", text2: "No valid profile selected!" });
+        }
+
+        console.log("Profile in use:", profile);
+
+        const formData = new FormData();
+        formData.append("file", {
+            uri: file.uri,
+            type: file.type || "image/jpeg", // Default to image/jpeg if type is missing
+            name: file.fileName || "upload.jpg", // Default name if fileName is missing
+        });
+        formData.append("user_id", userId);
+        formData.append("profile_id", profile.id);
+        formData.append("tags", tags);
+        formData.append("description", description);
+        formData.append("actual_date", date);
+
+        console.log("FormData:", formData);
+
         try {
-            // Upload file to Supabase Storage
-            const { data: fileData, error: fileError } = await supabase.storage
-                .from("eternal-moment-uploads")
-                .upload(filePath, {
-                    uri: file.uri,
-                    type: file.type,
-                    name: file.fileName,
-                });
-    
-            if (fileError) {
-                return Toast.show({ type: "error", text1: "Error", text2: "Failed to upload memory." });
+            const response = await fetch("http://localhost:5000/upload", 
+            {
+                method: "POST",
+                body: formData,
+                // headers: {}, // Let fetch set the correct Content-Type
+            });
+
+            if (!response.ok) {
+                console.log('the body', response)
+                const errorText = await response.text();
+                console.error("Upload error details:", errorText);
+                throw new Error("Failed to upload memory");
             }
-    
-            // Get the public URL of the uploaded file
-            const { data: publicUrlData } = supabase.storage
-                .from("eternal-moment-uploads")
-                .getPublicUrl(filePath);
-    
-            const publicUrl = publicUrlData.publicUrl;
-    
-            // Save metadata to database
-            const { data: metadata, error: metadataError } = await supabase
-                .from("memories")
-                .insert([
-                    {
-                        file_url: publicUrl,
-                        file_name: file.fileName,
-                        tags: tags,
-                        description: description,
-                        actual_date: date,
-                    },
-                ]);
-    
-            if (metadataError) {
-                return Toast.show({
-                    type: "error",
-                    text1: "Error",
-                    text2: "Failed to save memory metadata.",
-                });
-            }
-    
+
             // Show success message
             Toast.show({
                 type: "success",
                 text1: "Success",
                 text2: "Memory uploaded successfully!",
             });
-    
-            // Delay navigation to Memory Vault to allow the toast to display
-            setTimeout(() => {
-                navigation.navigate("MemoryVault");
-            }, 1500); // Delay navigation by 1.5 seconds
+
+            // Clear form
+            setFile(null);
+            setTags("");
+            setDescription("");
+            setDate("");
         } catch (error) {
+            console.error("Error uploading memory:", error);
             Toast.show({
                 type: "error",
                 text1: "Error",
@@ -120,7 +115,6 @@ const MemoryUpload = () => {
             });
         }
     };
-    
 
     return (
         <View style={styles.container}>
@@ -174,4 +168,6 @@ const styles = StyleSheet.create({
 });
 
 export default MemoryUpload;
+
+
 
