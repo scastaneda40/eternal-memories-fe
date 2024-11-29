@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Image, StyleSheet } from "react-native";
 import { supabase } from "../../constants/supabaseClient";
+import { useProfile } from "../../constants/ProfileContext";
+import { useUser } from "../../constants/UserContext";
 
 const MemoryVault = () => {
     const [memories, setMemories] = useState([]);
+    const { userId } = useUser(); // Get the user_id from context
+    const { profile } = useProfile(); // Get the profile from context
 
     useEffect(() => {
         const fetchMemories = async () => {
+            if (!profile || !userId) {
+                console.error("Profile or user ID is missing");
+                return;
+            }
+
             const { data, error } = await supabase
                 .from("memories")
                 .select("*")
+                .eq("user_id", userId) // Filter by user_id
+                .eq("profile_id", profile.id) // Filter by profile_id
                 .order("created_at", { ascending: false }); // Sort by most recent
 
             if (error) {
@@ -20,7 +31,7 @@ const MemoryVault = () => {
         };
 
         fetchMemories();
-    }, []);
+    }, [userId, profile]); // Re-run if userId or profile changes
 
     const renderMemory = ({ item }) => (
         <View style={styles.memoryContainer}>
@@ -53,13 +64,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 10,
     },
-    header: {
-        fontSize: 24,
-        fontWeight: "bold",
-        marginBottom: 10,
-    },
     listContent: {
-        paddingBottom: 20, // Add padding at the bottom for scrolling
+        paddingBottom: 20,
     },
     memoryContainer: {
         marginBottom: 15,
@@ -91,3 +97,4 @@ const styles = StyleSheet.create({
 });
 
 export default MemoryVault;
+
