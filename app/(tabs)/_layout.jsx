@@ -14,29 +14,31 @@ import { UserProvider } from "../../constants/UserContext";
 
 const Stack = createStackNavigator();
 
+// Define primary color
+const PRIMARY_TEAL = "#19747E";
+
 export default function Layout() {
     return (
-      <UserProvider>
-      <ProfileProvider>
-        <Stack.Navigator screenOptions={{ headerShown: true }}>
-            {/* Main Tabs */}
-            <Stack.Screen name="MainTabs" component={TabsLayout} options={{ headerShown: false }} />
+        <UserProvider>
+            <ProfileProvider>
+                <Stack.Navigator screenOptions={{ headerShown: true }}>
+                    {/* Main Tabs */}
+                    <Stack.Screen
+                        name="MainTabs"
+                        component={TabsLayout}
+                        options={{ headerShown: false }}
+                    />
 
-            <Stack.Screen name="MemoryChat" component={MemoryChat} />
-            <Stack.Screen name="AddMedia" component={AddMedia} />
-
-            <Stack.Screen name="LovedOneProfile" component={LovedOneProfile} />
-
-            <Stack.Screen name="CreateCapsule" component={CreateCapsule} />
-
-            <Stack.Screen name="CapsuleReview" component={CapsuleReview} />
-            <Stack.Screen name="PreviewCapsule" component={PreviewCapsule} />
-            <Stack.Screen name="EditCapsule" component={EditCapsule} />
-            <Stack.Screen name="CapsuleTimeline" component={CapsuleTimeline} />
-
-           
-        </Stack.Navigator>
-        </ProfileProvider>
+                    <Stack.Screen name="MemoryChat" component={MemoryChat} />
+                    <Stack.Screen name="AddMedia" component={AddMedia} />
+                    <Stack.Screen name="LovedOneProfile" component={LovedOneProfile} />
+                    <Stack.Screen name="CreateCapsule" component={CreateCapsule} />
+                    <Stack.Screen name="CapsuleReview" component={CapsuleReview} />
+                    <Stack.Screen name="PreviewCapsule" component={PreviewCapsule} />
+                    <Stack.Screen name="EditCapsule" component={EditCapsule} />
+                    <Stack.Screen name="CapsuleTimeline" component={CapsuleTimeline} />
+                </Stack.Navigator>
+            </ProfileProvider>
         </UserProvider>
     );
 }
@@ -57,13 +59,13 @@ function TabsLayout() {
                     } else if (route.name === "MemoryChat") {
                         iconName = "chatbubbles";
                     } else if (route.name === "CapsuleTimeline") {
-                      iconName = "time"; 
-                  }
+                        iconName = "time";
+                    }
 
                     return <Ionicons name={iconName} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: "blue",
-                tabBarInactiveTintColor: "gray",
+                tabBarActiveTintColor: PRIMARY_TEAL, // Primary teal for selected tab
+                tabBarInactiveTintColor: "gray", // Gray for inactive tabs
             })}
         >
             <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
@@ -74,3 +76,4 @@ function TabsLayout() {
         </Tabs>
     );
 }
+

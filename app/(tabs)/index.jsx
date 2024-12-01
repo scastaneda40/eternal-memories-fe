@@ -11,6 +11,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useProfile } from "../../constants/ProfileContext"; // Adjust the path as necessary
 import { supabase } from "../../constants/supabaseClient";
 
+const PRIMARY_TEAL = "#19747E"; // Updated to match the primary color across the app
+
 const Dashboard = () => {
     const navigation = useNavigation();
     const { setProfile } = useProfile(); // Set the selected profile in global context
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     button: {
-        backgroundColor: "#007AFF",
+        backgroundColor: PRIMARY_TEAL, // Use primary teal color
         padding: 15,
         borderRadius: 10,
         marginVertical: 10,
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
         color: "#555",
     },
     closeButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: PRIMARY_TEAL, // Use primary teal color for the close button
         padding: 10,
         borderRadius: 10,
         marginTop: 20,
@@ -170,7 +172,5 @@ const styles = StyleSheet.create({
 });
 
 export default Dashboard;
-
-
 
 
