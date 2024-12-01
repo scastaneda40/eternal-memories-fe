@@ -8,6 +8,8 @@ import CapsuleReview from "../../components/CapsuleReview";
 import { ProfileProvider } from "../../constants/ProfileContext";
 import MemoryChat from "./MemoryChat";
 import CapsuleTimeline from "./CapsuleTimeline";
+import PreviewCapsule from "../../components/PreviewCapsule";
+import EditCapsule from "../../components/EditCapsule";
 import { UserProvider } from "../../constants/UserContext";
 
 const Stack = createStackNavigator();
@@ -28,6 +30,10 @@ export default function Layout() {
             <Stack.Screen name="CreateCapsule" component={CreateCapsule} />
 
             <Stack.Screen name="CapsuleReview" component={CapsuleReview} />
+            <Stack.Screen name="PreviewCapsule" component={PreviewCapsule} />
+            <Stack.Screen name="EditCapsule" component={EditCapsule} />
+            <Stack.Screen name="CapsuleTimeline" component={CapsuleTimeline} />
+
            
         </Stack.Navigator>
         </ProfileProvider>

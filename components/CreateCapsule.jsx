@@ -13,8 +13,8 @@ import { useProfile } from "../constants/ProfileContext";
 import { useUser } from "../constants/UserContext";
 
 const CreateCapsule = () => {
-  const { userId } = useUser();
-  const { profile } = useProfile();
+  const { userId } = useUser(); // Custom context to fetch the user ID
+  const { profile } = useProfile(); // Custom context to fetch the profile
   const navigation = useNavigation();
 
   const [title, setTitle] = useState("");
@@ -23,6 +23,7 @@ const CreateCapsule = () => {
   const [privacy, setPrivacy] = useState("private"); // Default privacy level
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
+  // Map privacy levels to IDs
   const privacyLevels = {
     private: "7df6a42d-ad9d-456e-b80f-423c7c5dbe67",
     family: "198b8eb9-4761-4f39-a959-699fc0e0859a",
@@ -37,6 +38,7 @@ const CreateCapsule = () => {
 
     const privacyId = privacyLevels[privacy];
 
+    // Navigate to the AddMedia screen with capsule details
     navigation.navigate("AddMedia", {
       capsuleDetails: {
         title,
@@ -68,18 +70,32 @@ const CreateCapsule = () => {
         multiline
       />
 
-      <Text style={styles.label}>Release Date</Text>
-      <Button title="Pick a Date" onPress={() => setDatePickerVisibility(true)} />
+      <Text style={styles.label}>Release Date and Time</Text>
+      <Button title="Pick Date and Time" onPress={() => setDatePickerVisibility(true)} />
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
-        mode="date"
+        mode="datetime" // Allows selecting both date and time
         onConfirm={(date) => {
           setReleaseDate(date);
           setDatePickerVisibility(false);
         }}
         onCancel={() => setDatePickerVisibility(false)}
       />
-      <Text style={styles.selectedDate}>{releaseDate.toDateString()}</Text>
+      <Text style={styles.selectedDate}>
+        {releaseDate.toLocaleString()} {/* Displays full date and time */}
+      </Text>
+
+      <Text style={styles.label}>Privacy Level</Text>
+      <View style={styles.privacyContainer}>
+        {Object.keys(privacyLevels).map((level) => (
+          <Button
+            key={level}
+            title={level.charAt(0).toUpperCase() + level.slice(1)} // Capitalize first letter
+            onPress={() => setPrivacy(level)}
+            color={privacy === level ? "#007AFF" : "#ccc"} // Highlight selected level
+          />
+        ))}
+      </View>
 
       <Button title="Next" onPress={handleSubmit} />
     </View>
@@ -91,6 +107,11 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, marginVertical: 8 },
   input: { borderWidth: 1, padding: 10, borderRadius: 5, borderColor: "#ccc" },
   selectedDate: { fontSize: 14, color: "#555", marginVertical: 8 },
+  privacyContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
 });
 
 export default CreateCapsule;

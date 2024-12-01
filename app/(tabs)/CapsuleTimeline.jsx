@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { supabase } from "../../constants/supabaseClient";
 import { useUser } from "../../constants/UserContext";
+import { convertUTCToLocal, convertUTCToSpecifiedZone } from "../../utils/dateUtils";
+import { useNavigation } from "@react-navigation/native";
 
 const CapsuleTimeline = () => {
+  const navigation = useNavigation();
   const { userId } = useUser();
-  const [view, setView] = useState("upcoming"); // Toggle state
+  const [view, setView] = useState("upcoming");
   const [capsules, setCapsules] = useState([]);
 
   useEffect(() => {
@@ -18,46 +21,75 @@ const CapsuleTimeline = () => {
         .from("capsules")
         .select("*")
         .eq("user_id", userId);
-  
+
       if (view === "upcoming") {
         query = query.gte("release_date", new Date().toISOString());
       } else if (view === "released") {
         query = query.lte("release_date", new Date().toISOString());
       }
-  
+
       const { data, error } = await query.order("release_date", {
-        ascending: view === "upcoming", // Sort ascending for upcoming, descending for released
+        ascending: view === "upcoming",
       });
-  
+
       if (error) {
         console.error("Error fetching capsules:", error.message);
         return;
       }
-  
+
+      console.log("Fetched Capsules:", data);
       setCapsules(data || []);
     } catch (err) {
       console.error("Unexpected error fetching capsules:", err.message);
     }
   };
-  
 
   const toggleView = (selectedView) => setView(selectedView);
 
-  const renderCapsule = ({ item }) => (
-    <TouchableOpacity style={styles.capsuleItem}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.date}>
-        {view === "upcoming"
-          ? `Releases on: ${new Date(item.release_date).toDateString()}`
-          : `Released on: ${new Date(item.release_date).toDateString()}`}
-      </Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </TouchableOpacity>
-  );
+  const handlePress = async (capsule) => {
+    try {
+      const { data: mediaFiles, error } = await supabase
+        .from("media")
+        .select("*")
+        .eq("capsule_id", capsule.id); // Use capsule.id
+
+      if (error) {
+        console.error("Error fetching media files:", error.message);
+        return;
+      }
+
+      navigation.navigate("EditCapsule", {
+        capsuleDetails: capsule,
+        mediaFiles: mediaFiles || [],
+        isEditing: true, // Indicate edit flow
+      });
+    } catch (err) {
+      console.error("Error navigating to EditCapsule:", err.message);
+    }
+  };
+
+  const renderCapsule = ({ item }) => {
+    const localDate = convertUTCToLocal(item.release_date);
+    const specifiedDate = convertUTCToSpecifiedZone(
+      item.release_date,
+      item.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    );
+
+    return (
+      <TouchableOpacity style={styles.capsuleItem} onPress={() => handlePress(item)}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.date}>
+          {view === "upcoming"
+            ? `Releases on: ${localDate}`
+            : `Released on: ${specifiedDate || localDate}`}
+        </Text>
+        <Text style={styles.description}>{item.description}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* Toggle */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           onPress={() => toggleView("upcoming")}
@@ -66,7 +98,9 @@ const CapsuleTimeline = () => {
             view === "upcoming" && styles.activeButton,
           ]}
         >
-          <Text style={[styles.toggleText, view === "upcoming" && styles.activeText]}>
+          <Text
+            style={[styles.toggleText, view === "upcoming" && styles.activeText]}
+          >
             Upcoming Capsules
           </Text>
         </TouchableOpacity>
@@ -77,16 +111,17 @@ const CapsuleTimeline = () => {
             view === "released" && styles.activeButton,
           ]}
         >
-          <Text style={[styles.toggleText, view === "released" && styles.activeText]}>
+          <Text
+            style={[styles.toggleText, view === "released" && styles.activeText]}
+          >
             Released Capsules
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Capsule List */}
       <FlatList
         data={capsules}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderCapsule}
         ListEmptyComponent={<Text style={styles.emptyText}>No capsules found</Text>}
       />
@@ -123,3 +158,4 @@ const styles = StyleSheet.create({
 });
 
 export default CapsuleTimeline;
+

@@ -9,23 +9,12 @@ import {
   Alert,
 } from "react-native";
 import { Video } from "expo-av";
-import { supbase } from "../constants/supabaseClient";
+import { uploadToSupabase } from "../utils/uploadToSupabase";
+import { supabase } from "../constants/supabaseClient";
 
-// // Initialize Supabase client
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_SERVICE_KEY
-// );
-
-// Mapping file types to type_id values
-const typeMapping = {
-  image: "fd0836ed-95ee-4182-a14c-768c5b872660", // Photo
-  video: "8b086244-fa6b-4f1d-8576-4642fe3bc097", // Video
-  text: "73145e1c-472c-49db-a348-3f718867080c",  // Text
-};
 
 const CapsuleReview = ({ route, navigation }) => {
-  const { capsuleDetails, mediaFiles } = route.params || {};
+  const { capsuleDetails, mediaFiles, isEditing = false } = route.params || {};
   const [loading, setLoading] = useState(false);
 
   if (!capsuleDetails) {
@@ -37,83 +26,108 @@ const CapsuleReview = ({ route, navigation }) => {
     );
   }
 
-  const uploadToSupabase = async (file, folder = "capsules") => {
-    const { uri } = file;
-    const fileName = `${Date.now()}_${uri.split("/").pop()}`;
-    const filePath = `${folder}/${fileName}`;
-
-    try {
-      console.log("Uploading file to Supabase with path:", filePath);
-
-      const { data, error } = await supabase.storage
-        .from("eternal-moment-uploads") // Bucket name
-        .upload(filePath, { uri, type: "multipart/form-data" });
-
-      if (error) throw new Error(`Supabase upload error: ${error.message}`);
-
-      // Retrieve public URL
-      const { data: publicData, error: publicUrlError } = supabase.storage
-        .from("eternal-moment-uploads")
-        .getPublicUrl(filePath);
-
-      if (publicUrlError) {
-        throw new Error(`Error retrieving public URL: ${publicUrlError.message}`);
-      }
-
-      console.log("Public URL retrieved:", publicData.publicUrl);
-      return publicData.publicUrl;
-    } catch (error) {
-      console.error("Error uploading file to Supabase:", error);
-      throw error;
-    }
-  };
-
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      const { data: capsuleData, error: capsuleError } = await supabase
-        .from("capsules")
-        .insert([
-          {
-            title: capsuleDetails.title,
-            description: capsuleDetails.description,
-            release_date: capsuleDetails.release_date,
-            privacy_id: capsuleDetails.privacy_id,
-            user_id: capsuleDetails.user_id,
-            profile_id: capsuleDetails.profile_id, // Add profile_id
-          },
-        ])
-        .select()
-        .single();
+      console.log("Capsule Details:", capsuleDetails);
+      console.log("Media Files:", mediaFiles);
   
-      if (capsuleError) throw new Error(capsuleError.message);
-  
-      for (const file of mediaFiles) {
-        const publicUrl = await uploadToSupabase(file, "media");
-        const typeId = typeMapping[file.type] || typeMapping.text;
-  
-        await supabase.from("media").insert([
-          { capsule_id: capsuleData.id, type_id: typeId, url: publicUrl },
-        ]);
+      let capsuleId = capsuleDetails.id;
+      if (!capsuleId) {
+        console.log("Creating new capsule...");
+        capsuleId = await createCapsule();
+        console.log("Created Capsule ID:", capsuleId);
       }
   
-      Alert.alert("Success", "Capsule saved!");
-      navigation.navigate("MainTabs");
+      // Insert media into the database
+      const newMedia = mediaFiles.filter((media) => media.isNew);
+      const insertedMedia = [];
+  
+      for (const media of newMedia) {
+        const publicUrl = await uploadToSupabase(media, "media");
+        const typeId =
+          media.type === "image"
+            ? "fd0836ed-95ee-4182-a14c-768c5b872660"
+            : "8b086244-fa6b-4f1d-8576-4642fe3bc097";
+  
+        console.log("Inserting media:", { type_id: typeId, url: publicUrl });
+  
+        const { data, error } = await supabase.from("media").insert([
+          { type_id: typeId, url: publicUrl },
+        ]).select();
+  
+        if (error) {
+          console.error("Error inserting media:", error);
+          throw error;
+        }
+  
+        insertedMedia.push(data[0]);
+      }
+  
+      // Insert into the join table
+      for (const media of insertedMedia) {
+        const { error } = await supabase.from("capsule_media").insert([
+          { capsule_id: capsuleId, media_id: media.id },
+        ]);
+        if (error) {
+          console.error("Error inserting into join table:", error);
+          throw error;
+        }
+      }
+  
+      Alert.alert("Success", "Capsule created successfully!");
+      navigation.navigate("CapsuleTimeline");
     } catch (error) {
+      console.error("Error saving capsule:", error);
       Alert.alert("Error", "Failed to save capsule.");
     } finally {
       setLoading(false);
     }
   };
   
+  
+  
 
-  const handleEdit = () => {
-    navigation.navigate("AddMedia", { capsuleDetails, mediaFiles });
+  const createCapsule = async () => {
+    const { data, error } = await supabase
+      .from("capsules")
+      .insert([
+        {
+          title: capsuleDetails.title,
+          description: capsuleDetails.description,
+          release_date: capsuleDetails.release_date,
+          privacy_id: capsuleDetails.privacy_id,
+          user_id: capsuleDetails.user_id,
+          profile_id: capsuleDetails.profile_id,
+        },
+      ])
+      .select(); // Fetch the created capsule's data
+  
+    if (error) throw error;
+    if (!data || !data[0]) {
+      console.error("Capsule creation failed:", data);
+      throw new Error("Failed to create capsule.");
+    }
+    return data[0].id; // Return the created capsule ID
+  };
+  
+
+  const updateCapsule = async () => {
+    // Update logic for existing capsules
+    const { error } = await supabase
+      .from("capsules")
+      .update({
+        title: capsuleDetails.title,
+        description: capsuleDetails.description,
+        release_date: capsuleDetails.release_date,
+      })
+      .eq("id", capsuleDetails.id);
+    if (error) throw error;
+    console.log("Capsule updated successfully");
   };
 
   return (
     <View style={styles.container}>
-      {/* Capsule Details */}
       <View style={styles.detailsContainer}>
         <Text style={styles.sectionTitle}>Capsule Details</Text>
         <Text style={styles.detailItem}>
@@ -124,27 +138,23 @@ const CapsuleReview = ({ route, navigation }) => {
         </Text>
         <Text style={styles.detailItem}>
           <Text style={styles.label}>Release Date:</Text>{" "}
-          {new Date(capsuleDetails.release_date).toDateString()}
-        </Text>
-        <Text style={styles.detailItem}>
-          <Text style={styles.label}>Privacy:</Text> {capsuleDetails.privacy_level}
+          {new Date(capsuleDetails.release_date).toLocaleString()}
         </Text>
       </View>
 
-      {/* Media Preview */}
       <View style={styles.mediaContainer}>
         <Text style={styles.sectionTitle}>Media Preview</Text>
         <FlatList
           horizontal
           data={mediaFiles}
-          keyExtractor={(item, index) => `${item.uri}-${index}`}
+          keyExtractor={(item, index) => `${item.id || item.uri}-${index}`}
           renderItem={({ item }) => (
             <View style={styles.mediaItem}>
               {item.type === "image" ? (
-                <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
+                <Image source={{ uri: item.url || item.uri }} style={styles.mediaPreview} />
               ) : (
                 <Video
-                  source={{ uri: item.uri }}
+                  source={{ uri: item.url || item.uri }}
                   style={styles.mediaPreview}
                   useNativeControls
                   resizeMode="cover"
@@ -155,11 +165,9 @@ const CapsuleReview = ({ route, navigation }) => {
         />
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
-        <Button title="Edit" onPress={handleEdit} />
         <Button
-          title={loading ? "Saving..." : "Confirm"}
+          title={isEditing ? "Update Capsule" : "Submit Capsule"}
           onPress={handleConfirm}
           disabled={loading}
         />
@@ -177,11 +185,15 @@ const styles = StyleSheet.create({
   mediaContainer: { marginBottom: 20 },
   mediaItem: { marginRight: 10 },
   mediaPreview: { width: 100, height: 100, borderRadius: 5 },
-  buttonContainer: { flexDirection: "row", justifyContent: "space-between" },
+  buttonContainer: { marginTop: 20 },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
 
 export default CapsuleReview;
+
+
+
+
 
 
 
