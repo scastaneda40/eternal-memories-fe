@@ -8,7 +8,7 @@ import CapsuleReview from "../../components/CapsuleReview";
 import { ProfileProvider } from "../../constants/ProfileContext";
 import MemoryChat from "./MemoryChat";
 import CapsuleTimeline from "./CapsuleTimeline";
-import { UserProvider } from "@/constants/UserContext";
+import { UserProvider } from "../../constants/UserContext";
 
 const Stack = createStackNavigator();
 

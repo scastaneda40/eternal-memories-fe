@@ -9,13 +9,13 @@ import {
   Alert,
 } from "react-native";
 import { Video } from "expo-av";
-import { createClient } from "@supabase/supabase-js";
+import { supbase } from "../constants/supabaseClient";
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// // Initialize Supabase client
+// const supabase = createClient(
+//   process.env.SUPABASE_URL,
+//   process.env.SUPABASE_SERVICE_KEY
+// );
 
 // Mapping file types to type_id values
 const typeMapping = {

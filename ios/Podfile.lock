@@ -1328,7 +1328,7 @@ PODS:
     - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
-  - react-native-image-picker (7.1.2):
+  - react-native-image-picker (7.2.2):
     - DoubleConversion
     - glog
     - RCT-Folly (= 2024.01.01.00)
@@ -2100,7 +2100,7 @@ SPEC CHECKSUMS:
   react-native-compressor: 2a39f004f6fed62ba022f12424a17b1aa45085ff
   react-native-document-picker: ccca729bfa32ac6f20db6c48dd8ad4ca29ea8795
   react-native-get-random-values: 21325b2244dfa6b58878f51f9aa42821e7ba3d06
-  react-native-image-picker: eb2fc4ddc8c69b1d0376afd3267a06d46f203fee
+  react-native-image-picker: 9ce8a8881d437801a678dbc6eaf4d80a9e4af66e
   react-native-multiple-image-picker: bfbdaa54e18ba98ca205f5fa7f141976d89247a9
   react-native-safe-area-context: 4532f1a0c5d34a46b9324ccaaedcb5582a302b7d
   React-nativeconfig: aeed6e2a8ac02b2df54476afcc7c663416c12bf7

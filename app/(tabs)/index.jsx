@@ -11,7 +11,6 @@ import { useNavigation } from "@react-navigation/native";
 import { useProfile } from "../../constants/ProfileContext"; // Adjust the path as necessary
 import { supabase } from "../../constants/supabaseClient";
 
-
 const Dashboard = () => {
     const navigation = useNavigation();
     const { setProfile } = useProfile(); // Set the selected profile in global context
