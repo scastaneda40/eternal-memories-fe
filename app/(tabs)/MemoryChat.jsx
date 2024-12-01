@@ -7,14 +7,17 @@ import {
     Text,
     StyleSheet,
     FlatList,
-    KeyboardAvoidingView,
+    Modal,
+    TouchableOpacity,
     Platform,
+    KeyboardAvoidingView,
 } from "react-native";
 import { useProfile } from "../../constants/ProfileContext";
 import { useUser } from "../../constants/UserContext";
+import { supabase } from "../../constants/supabaseClient";
 
 const MemoryChat = ({ route }) => {
-    const { profile: globalProfile } = useProfile();
+    const { profile: globalProfile, setProfile } = useProfile();
     const { userId } = useUser();
     const profile = route?.params?.profile || globalProfile || null;
 
@@ -25,7 +28,37 @@ const MemoryChat = ({ route }) => {
     const [dots, setDots] = useState("");
     const flatListRef = useRef(null);
 
-    // Replace this with your actual user ID logic
+    const [profiles, setProfiles] = useState([]);
+    const [isModalVisible, setModalVisible] = useState(!profile); // Show modal if no profile
+
+    // Fetch profiles if no profile is set
+    useEffect(() => {
+        if (!profile) {
+            fetchProfiles();
+        }
+    }, [profile]);
+
+    const fetchProfiles = async () => {
+        try {
+            const { data, error } = await supabase
+                .from("profile")
+                .select("*")
+                .eq("user_id", userId);
+
+            if (error) {
+                console.error("Error fetching profiles:", error.message);
+            } else {
+                setProfiles(data || []);
+            }
+        } catch (error) {
+            console.error("Unexpected error fetching profiles:", error);
+        }
+    };
+
+    const selectProfile = (selectedProfile) => {
+        setProfile(selectedProfile);
+        setModalVisible(false);
+    };
 
     useEffect(() => {
         if (isTyping) {
@@ -45,33 +78,29 @@ const MemoryChat = ({ route }) => {
             ]);
             return;
         }
-    
+
         const userMessage = { id: Date.now(), text: input, sender: "User" };
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
         setIsTyping(true);
-    
+
         try {
-            await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000));
-    
             const response = await fetch("http://localhost:5000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     message: input,
                     profile,
-                    user_id: userId, // Include user ID in the request
+                    user_id: userId,
                 }),
             });
-    
+
             const data = await response.json();
-            console.log("Server Response:", data);
-    
             if (!data.response || data.response.trim() === "") {
                 throw new Error("Received empty response from server.");
             }
-    
+
             const aiMessage = { id: Date.now() + 1, text: data.response, sender: "AI" };
             setMessages((prev) => [...prev, aiMessage]);
         } catch (error) {
@@ -85,7 +114,6 @@ const MemoryChat = ({ route }) => {
             setIsLoading(false);
         }
     };
-    
 
     useEffect(() => {
         if (flatListRef.current) {
@@ -95,6 +123,34 @@ const MemoryChat = ({ route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            {isModalVisible && (
+                <Modal visible={isModalVisible} transparent={true} animationType="slide">
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Select a Profile</Text>
+                            <FlatList
+                                data={profiles}
+                                keyExtractor={(item) => item.id.toString()}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.profileItem}
+                                        onPress={() => selectProfile(item)}
+                                    >
+                                        <Text style={styles.profileText}>{item.name}</Text>
+                                        <Text style={styles.profileTextSmall}>{item.relationship}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={() => setModalVisible(false)}
+                            >
+                                <Text style={styles.buttonText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            )}
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
                 <FlatList
                     ref={flatListRef}
@@ -110,15 +166,10 @@ const MemoryChat = ({ route }) => {
                             <Text style={styles.messageText}>{item.text}</Text>
                         </View>
                     )}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}              
                 />
                 {isTyping && (
                     <View style={styles.typingBubble}>
-                        <View style={styles.typingContainer}>
-                            <Text style={styles.typingText}>Typing</Text>
-                            <Text style={styles.typingDots}>{dots}</Text>
-                        </View>
+                        <Text style={styles.typingText}>Typing{dots}</Text>
                     </View>
                 )}
                 <View style={styles.inputContainer}>
@@ -138,29 +189,58 @@ const MemoryChat = ({ route }) => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 10 },
     messageBubble: { marginVertical: 5, padding: 10, borderRadius: 10, maxWidth: "80%" },
-    userBubble: { backgroundColor: "#007AFF", alignSelf: "flex-end", color: "#fff" },
-    aiBubble: { backgroundColor: "#f0f0f0", alignSelf: "flex-start", color: "#333" },
+    userBubble: { backgroundColor: "#007AFF", alignSelf: "flex-end" },
+    aiBubble: { backgroundColor: "#f0f0f0", alignSelf: "flex-start" },
     messageText: { fontSize: 16 },
-    typingBubble: { 
-        alignSelf: "flex-start", 
-        backgroundColor: "#f0f0f0", 
-        padding: 10, 
-        borderRadius: 10, 
-        marginBottom: 10, 
-        marginTop: 10, // Add space above Typing... div
-    },
-    typingContainer: { flexDirection: "row", alignItems: "center" },
+    typingBubble: { alignSelf: "flex-start", marginVertical: 10 },
     typingText: { fontSize: 16, color: "#333" },
-    typingDots: { fontSize: 16, color: "#333", marginLeft: 5, width: 20 },
-    inputContainer: { 
-        flexDirection: "row", 
-        alignItems: "center", 
-        paddingHorizontal: 10, 
-        marginBottom: 10, 
-        marginTop: 5, // Ensure consistent spacing
-    },
+    inputContainer: { flexDirection: "row", padding: 10 },
     input: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 10, marginRight: 10 },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        padding: 20,
+        borderRadius: 10,
+        width: "90%",
+        maxHeight: "80%",
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 10,
+        textAlign: "center",
+    },
+    profileItem: {
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: "#ddd",
+        alignItems: "center",
+    },
+    profileText: {
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    profileTextSmall: {
+        fontSize: 14,
+        color: "#666",
+    },
+    closeButton: {
+        backgroundColor: "#007AFF",
+        padding: 10,
+        borderRadius: 10,
+        marginTop: 20,
+        alignItems: "center",
+    },
+    buttonText: {
+        color: "#fff",
+        fontWeight: "bold",
+    },
 });
 
-
 export default MemoryChat;
+

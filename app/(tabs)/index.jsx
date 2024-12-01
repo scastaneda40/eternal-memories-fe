@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useProfile } from "../../constants/ProfileContext"; // Adjust the path as necessary
 import { supabase } from "../../constants/supabaseClient";
 
+
 const Dashboard = () => {
     const navigation = useNavigation();
     const { setProfile } = useProfile(); // Set the selected profile in global context
@@ -62,6 +63,12 @@ const Dashboard = () => {
                 onPress={() => navigation.navigate("LovedOneProfile")}
             >
                 <Text style={styles.buttonText}>Create Loved One Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.button}
+                onPress={() => navigation.navigate("CreateCapsule")}
+            >
+                <Text style={styles.buttonText}>Create Capsule</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
@@ -164,7 +171,6 @@ const styles = StyleSheet.create({
 });
 
 export default Dashboard;
-
 
 
 
