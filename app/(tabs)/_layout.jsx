@@ -15,7 +15,7 @@ import MediaBankUpload from "../../components/MediaBankUpload";
 import MediaGallery from "../../components/MediaGallery";
 import VaultMap from "../../components/VaultMap";
 import { UserProvider } from "../../constants/UserContext";
-import MemoryUpload from "./MemoryUpload";
+import MemoryUpload from "../../components/MemoryUpload";
 
 const Stack = createStackNavigator();
 
@@ -29,10 +29,17 @@ export default function Layout() {
                 <Stack.Navigator screenOptions={{ headerShown: true }}>
                     {/* Main Tabs */}
                     <Stack.Screen
-                        name="MainTabs"
-                        component={TabsLayout}
-                        options={{ headerShown: false }}
+                    name="MainTabs"
+                    component={TabsLayout}
+                    options={{
+                        headerTitle: "",
+                        headerStyle: { backgroundColor: "#f8f8f8" },
+                        headerShadowVisible: false, // Remove bottom shadow
+                        headerShown: false
+                    }}
                     />
+
+
 
                     <Stack.Screen name="MemoryChat" component={MemoryChat} />
                     <Stack.Screen name="AddMedia" component={AddMedia} />
@@ -46,7 +53,7 @@ export default function Layout() {
                     <Stack.Screen name="VaultMap" component={VaultMap} options={{ title: "Memory Map" }} />
                     <Stack.Screen name="MemoryUpload" component={MemoryUpload} />
                     <Stack.Screen name="MediaBankUpload" component={MediaBankUpload} />
-                    <Stack.Screen name="MediaGallery" component={MediaGallery} />
+                    <Stack.Screen name="MediaGallery" component={MediaGallery} options={{ title: "Gallery" }} />
 
                 </Stack.Navigator>
             </ProfileProvider>
@@ -63,8 +70,6 @@ function TabsLayout() {
 
                     if (route.name === "index") {
                         iconName = "home";
-                    } else if (route.name === "MemoryUpload") {
-                        iconName = "cloud-upload";
                     } else if (route.name === "MemoryVault") {
                         iconName = "albums";
                     } else if (route.name === "MemoryChat") {
@@ -79,8 +84,7 @@ function TabsLayout() {
                 tabBarInactiveTintColor: "gray", // Gray for inactive tabs
             })}
         >
-            <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
-            <Tabs.Screen name="MemoryUpload" options={{ title: "Upload Memory" }} />
+            <Tabs.Screen name="index" options={{ title: "Dashboard", headerShown: false }} />
             <Tabs.Screen name="MemoryVault" options={{ title: "Memory Vault" }} />
             <Tabs.Screen name="CapsuleTimeline" options={{ title: "Capsules" }} />
             <Tabs.Screen name="MemoryChat" options={{ title: "Memory Chat" }} />

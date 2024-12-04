@@ -192,71 +192,113 @@ const MediaBankGallery = () => {
           </View>
         </View>
       </Modal>
+{selectedMedia && (
+  <Modal visible={true} transparent={true} onRequestClose={() => setSelectedMedia(null)}>
+    <View style={styles.modalContainer}>
+      <View style={styles.previewModalContent}>
+        {/* Display Selected Media Name */}
+        <Text style={styles.mediaName}>{selectedMedia.name}</Text>
 
-      {selectedMedia && (
-        <Modal visible={true} transparent={true} onRequestClose={() => setSelectedMedia(null)}>
-          <View style={styles.modalContainer}>
-            <Image source={{ uri: selectedMedia.url }} style={styles.fullscreenImage} />
-            <Text style={styles.mediaName}>{selectedMedia.name}</Text>
-            <TouchableOpacity onPress={() => setSelectedMedia(null)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
+        {/* Display Selected Media Image */}
+        <Image source={{ uri: selectedMedia.url }} style={styles.fullscreenImage} />
+
+        {/* Close Button */}
+        <TouchableOpacity
+          style={styles.previewCloseButton} // Use the dedicated button style
+          onPress={() => setSelectedMedia(null)}
+        >
+          <Text style={styles.previewCloseButtonText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
+)}
+
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  gallery: { justifyContent: "space-between", paddingHorizontal: 20 },
-  mediaImage: { width: 100, height: 100, margin: 5, borderRadius: 10 },
-  noMediaText: { fontSize: 16, color: "#999", textAlign: "center", marginTop: 20 },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    width: "90%",
-    alignItems: "center",
-  },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
-    width: "100%",
-  },
-  previewImage: { width: 150, height: 150, marginVertical: 10, borderRadius: 10 },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 20, width: "100%" },
-  modalButton: {
-    backgroundColor: "#19747E",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  closeButton: { backgroundColor: "#F44336" },
-  uploadButton: {
-    backgroundColor: "#19747E",
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  fullscreenImage: { width: "90%", height: "70%", borderRadius: 10 },
-});
-
+    container: { flex: 1, backgroundColor: "#fff" },
+    gallery: { justifyContent: "center", alignItems: "center"},
+    mediaImage: { width: 100, height: 100, margin: 5, borderRadius: 10 },
+    noMediaText: { fontSize: 16, color: "#999", textAlign: "center", marginTop: 20 },
+    modalContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+      backgroundColor: "#fff",
+      padding: 20,
+      borderRadius: 10,
+      width: "90%",
+      alignItems: "center",
+    },
+    modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
+    input: {
+      borderWidth: 1,
+      borderColor: "#ddd",
+      padding: 10,
+      marginVertical: 10,
+      borderRadius: 5,
+      width: "100%",
+    },
+    previewImage: { width: 150, height: 150, marginVertical: 10, borderRadius: 10 },
+    modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 20, width: "100%" },
+    modalButton: {
+      backgroundColor: "#19747E",
+      padding: 12,
+      borderRadius: 10,
+      alignItems: "center",
+      flex: 1,
+      marginHorizontal: 5,
+    },
+    closeButton: { backgroundColor: "#F44336" },
+    uploadButton: {
+      backgroundColor: "#19747E",
+      padding: 15,
+      borderRadius: 10,
+      marginHorizontal: 20,
+      marginVertical: 30,
+      alignItems: "center",
+      marginTop: 20
+    },
+    buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+    fullscreenImage: { width: "90%", height: "60%", marginBottom: 15, borderRadius: 10 },
+  
+    previewModalContent: {
+        backgroundColor: "#fff", // Modal background
+        padding: 15, // Adjust padding for less space
+        borderRadius: 10, // Rounded corners
+        alignItems: "center",
+        justifyContent: "center",
+        width: "90%",
+      },
+      mediaName: {
+        fontSize: 20,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginVertical: 5, // Reduce space above and below the title
+        marginBottom: 20,
+      },
+      previewCloseButton: {
+        backgroundColor: "#F44336", // Red button background
+        padding: 12, // Button padding
+        borderRadius: 10,
+        alignItems: "center",
+        marginTop: 2, // Reduce space between the button and image
+        width: "50%", // Adjust button width
+        marginTop: 20
+      },  
+      previewCloseButtonText: {
+          color: "#fff"
+      }    
+  });
+  
+  
+  
 export default MediaBankGallery;
 

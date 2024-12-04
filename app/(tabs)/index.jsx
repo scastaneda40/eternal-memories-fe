@@ -1,143 +1,94 @@
 import React, { useState, useEffect } from "react";
 import {
+    SafeAreaView,
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Modal,
-    FlatList,
-    Alert,
+    ImageBackground,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useProfile } from "../../constants/ProfileContext";
 import { supabase } from "../../constants/supabaseClient";
 
 const PRIMARY_TEAL = "#19747E";
 
 const Dashboard = () => {
     const navigation = useNavigation();
-    const { profile, setProfile } = useProfile(); // Use profile from global context
-    const [profiles, setProfiles] = useState([]);
-    const [isModalVisible, setModalVisible] = useState(false);
+    const [highlightedMemory, setHighlightedMemory] = useState(null);
 
-    // Fetch profiles from Supabase or local storage
     useEffect(() => {
-        const fetchProfiles = async () => {
+        const fetchHighlightedMemory = async () => {
             try {
                 const { data, error } = await supabase
-                    .from("profile")
-                    .select("*");
+                    .from("memories")
+                    .select("*")
+                    .order("created_at", { ascending: false })
+                    .limit(1);
 
                 if (error) {
-                    console.error("Error fetching profiles:", error.message);
+                    console.error("Error fetching memory:", error.message);
                 } else {
-                    setProfiles(data || []);
+                    setHighlightedMemory(data[0]);
                 }
             } catch (err) {
-                console.error("Unexpected error fetching profiles:", err);
+                console.error("Unexpected error fetching memory:", err);
             }
         };
 
-        fetchProfiles();
+        fetchHighlightedMemory();
     }, []);
-
-    // Automatically show the modal if no profile is set
-    useEffect(() => {
-        if (!profile) {
-            setModalVisible(true);
-        }
-    }, [profile]);
-
-    const handleProfileSelect = (selectedProfile) => {
-        setProfile(selectedProfile);
-        setModalVisible(false);
-        Alert.alert("Profile Selected", `You selected: ${selectedProfile.name}`);
-    };
-
-    const renderProfile = ({ item }) => (
-        <TouchableOpacity
-            style={styles.profileItem}
-            onPress={() => handleProfileSelect(item)}
-        >
-            <Text style={styles.profileName}>{item.name}</Text>
-            <Text style={styles.profileRelationship}>{item.relationship}</Text>
-        </TouchableOpacity>
-    );
 
     return (
         <View style={styles.container}>
-            {/* Navigation Buttons */}
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate("MemoryUpload")}
-            >
-                <Text style={styles.buttonText}>Upload Memory</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate("LovedOneProfile")}
-            >
-                <Text style={styles.buttonText}>Create Loved One Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate("CreateCapsule")}
-            >
-                <Text style={styles.buttonText}>Create Capsule</Text>
-            </TouchableOpacity>
+            {/* Hero Section */}
+            <View>
+                <ImageBackground
+                    source={{
+                        uri: highlightedMemory?.file_url || "https://via.placeholder.com/500",
+                    }}
+                    style={styles.heroImage}
+                    resizeMode="cover"
+                >
+                    <View style={styles.overlay} />
+                    <TouchableOpacity
+                        style={styles.heroButton}
+                        onPress={() => navigation.navigate("MemoryVault")}
+                    >
+                        <Text style={styles.heroButtonText}>View Memory Vault</Text>
+                    </TouchableOpacity>
+                </ImageBackground>
+            </View>
 
-            {/* New Media Bank Buttons */}
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() =>
-                    navigation.navigate("MediaBankUpload", {
-                        onUploadComplete: () => navigation.navigate("MediaGallery"),
-                    })
-                }
-            >
-                <Text style={styles.buttonText}>Upload Media</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate("MediaGallery")}
-            >
-                <Text style={styles.buttonText}>View Media Gallery</Text>
-            </TouchableOpacity>
+            {/* Action Tiles */}
+            <View style={styles.actionsContainer}>
+                <TouchableOpacity
+                    style={[styles.actionTile, styles.uploadTile]}
+                    onPress={() => navigation.navigate("MemoryUpload")}
+                >
+                    <Text style={styles.actionText}>Upload Memory</Text>
+                </TouchableOpacity>
 
-            {/* Profile Selection Modal */}
-            <Modal
-                visible={isModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select a Profile</Text>
-                        <FlatList
-                            data={profiles}
-                            keyExtractor={(item) => item.id.toString()}
-                            renderItem={renderProfile}
-                            contentContainerStyle={styles.listContent}
-                        />
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => {
-                                if (!profile) {
-                                    Alert.alert(
-                                        "Profile Required",
-                                        "Please select a profile to continue."
-                                    );
-                                } else {
-                                    setModalVisible(false);
-                                }
-                            }}
-                        >
-                            <Text style={styles.buttonText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+                <TouchableOpacity
+                    style={[styles.actionTile, styles.profileTile]}
+                    onPress={() => navigation.navigate("LovedOneProfile")}
+                >
+                    <Text style={styles.actionText}>Create Profile</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.actionTile, styles.galleryTile]}
+                    onPress={() => navigation.navigate("MediaGallery")}
+                >
+                    <Text style={styles.actionText}>View Gallery</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.actionTile, styles.capsuleTile]}
+                    onPress={() => navigation.navigate("CreateCapsule")}
+                >
+                    <Text style={styles.actionText}>Create Capsule</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -145,69 +96,63 @@ const Dashboard = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#fff",
-        padding: 20,
+        backgroundColor: "#f8f9fa",
     },
-    button: {
+    heroImage: {
+        width: "100%",
+        height: 250, // Fixed height for hero image
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0, 0, 0, 0.3)",
+    },
+    heroButton: {
+        position: "absolute",
+        bottom: 20,
+        alignSelf: "center",
         backgroundColor: PRIMARY_TEAL,
         padding: 15,
         borderRadius: 10,
-        marginVertical: 10,
-        width: "80%",
-        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
-    buttonText: {
+    heroButtonText: {
         color: "#fff",
         fontSize: 16,
         fontWeight: "bold",
     },
-    modalContainer: {
+    actionsContainer: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        backgroundColor: "#fff",
+        marginTop: 10, // Adjust spacing between hero and actions
         padding: 20,
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
+    actionTile: {
+        width: "45%",
+        height: 120,
         borderRadius: 10,
-        width: "90%",
-        maxHeight: "80%",
+        marginBottom: 15,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
-        textAlign: "center",
-    },
-    listContent: {
-        paddingVertical: 10,
-    },
-    profileItem: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: "#ddd",
-    },
-    profileName: {
+    uploadTile: { backgroundColor: "#FFCCBC" },
+    profileTile: { backgroundColor: "#C5E1A5" },
+    galleryTile: { backgroundColor: "#80DEEA" },
+    capsuleTile: { backgroundColor: "#FFAB91" },
+    actionText: {
         fontSize: 16,
         fontWeight: "bold",
-    },
-    profileRelationship: {
-        fontSize: 14,
-        color: "#555",
-    },
-    closeButton: {
-        backgroundColor: PRIMARY_TEAL,
-        padding: 10,
-        borderRadius: 10,
-        marginTop: 20,
-        alignItems: "center",
+        color: "#fff",
     },
 });
 
 export default Dashboard;
-
-
-

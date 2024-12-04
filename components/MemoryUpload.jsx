@@ -18,9 +18,9 @@ import MapView, { Marker } from "react-native-maps";
 import Geocoder from "react-native-geocoding";
 import Carousel from "react-native-reanimated-carousel";
 import { useNavigation } from "@react-navigation/native";
-import { supabase } from "../../constants/supabaseClient";
-import { useProfile } from "../../constants/ProfileContext";
-import { useUser } from "../../constants/UserContext";
+import { supabase } from "../constants/supabaseClient";
+import { useProfile } from "../constants/ProfileContext";
+import { useUser } from "../constants/UserContext";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyBILRnNABNjR-C8w8GZYinp_uZBouZJHrc";
 Geocoder.init(GOOGLE_MAPS_API_KEY);
