@@ -6,39 +6,52 @@ import {
     StyleSheet,
     Modal,
     FlatList,
+    Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useProfile } from "../../constants/ProfileContext"; // Adjust the path as necessary
+import { useProfile } from "../../constants/ProfileContext";
 import { supabase } from "../../constants/supabaseClient";
 
-const PRIMARY_TEAL = "#19747E"; // Updated to match the primary color across the app
+const PRIMARY_TEAL = "#19747E";
 
 const Dashboard = () => {
     const navigation = useNavigation();
-    const { setProfile } = useProfile(); // Set the selected profile in global context
+    const { profile, setProfile } = useProfile(); // Use profile from global context
     const [profiles, setProfiles] = useState([]);
     const [isModalVisible, setModalVisible] = useState(false);
 
     // Fetch profiles from Supabase or local storage
     useEffect(() => {
         const fetchProfiles = async () => {
-            const { data, error } = await supabase
-                .from("profile")
-                .select("*");
+            try {
+                const { data, error } = await supabase
+                    .from("profile")
+                    .select("*");
 
-            if (error) {
-                console.error("Error fetching profiles:", error.message);
-            } else {
-                setProfiles(data || []);
+                if (error) {
+                    console.error("Error fetching profiles:", error.message);
+                } else {
+                    setProfiles(data || []);
+                }
+            } catch (err) {
+                console.error("Unexpected error fetching profiles:", err);
             }
         };
 
         fetchProfiles();
     }, []);
 
-    const handleProfileSelect = (profile) => {
-        setProfile(profile); // Set the selected profile globally
-        setModalVisible(false); // Close the modal
+    // Automatically show the modal if no profile is set
+    useEffect(() => {
+        if (!profile) {
+            setModalVisible(true);
+        }
+    }, [profile]);
+
+    const handleProfileSelect = (selectedProfile) => {
+        setProfile(selectedProfile);
+        setModalVisible(false);
+        Alert.alert("Profile Selected", `You selected: ${selectedProfile.name}`);
     };
 
     const renderProfile = ({ item }) => (
@@ -53,6 +66,7 @@ const Dashboard = () => {
 
     return (
         <View style={styles.container}>
+            {/* Navigation Buttons */}
             <TouchableOpacity
                 style={styles.button}
                 onPress={() => navigation.navigate("MemoryUpload")}
@@ -71,13 +85,26 @@ const Dashboard = () => {
             >
                 <Text style={styles.buttonText}>Create Capsule</Text>
             </TouchableOpacity>
+
+            {/* New Media Bank Buttons */}
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => setModalVisible(true)}
+                onPress={() =>
+                    navigation.navigate("MediaBankUpload", {
+                        onUploadComplete: () => navigation.navigate("MediaGallery"),
+                    })
+                }
             >
-                <Text style={styles.buttonText}>Select Profile</Text>
+                <Text style={styles.buttonText}>Upload Media</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.button}
+                onPress={() => navigation.navigate("MediaGallery")}
+            >
+                <Text style={styles.buttonText}>View Media Gallery</Text>
             </TouchableOpacity>
 
+            {/* Profile Selection Modal */}
             <Modal
                 visible={isModalVisible}
                 animationType="slide"
@@ -89,13 +116,22 @@ const Dashboard = () => {
                         <Text style={styles.modalTitle}>Select a Profile</Text>
                         <FlatList
                             data={profiles}
-                            keyExtractor={(item) => item.id}
+                            keyExtractor={(item) => item.id.toString()}
                             renderItem={renderProfile}
                             contentContainerStyle={styles.listContent}
                         />
                         <TouchableOpacity
                             style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}
+                            onPress={() => {
+                                if (!profile) {
+                                    Alert.alert(
+                                        "Profile Required",
+                                        "Please select a profile to continue."
+                                    );
+                                } else {
+                                    setModalVisible(false);
+                                }
+                            }}
                         >
                             <Text style={styles.buttonText}>Close</Text>
                         </TouchableOpacity>
@@ -115,7 +151,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     button: {
-        backgroundColor: PRIMARY_TEAL, // Use primary teal color
+        backgroundColor: PRIMARY_TEAL,
         padding: 15,
         borderRadius: 10,
         marginVertical: 10,
@@ -163,7 +199,7 @@ const styles = StyleSheet.create({
         color: "#555",
     },
     closeButton: {
-        backgroundColor: PRIMARY_TEAL, // Use primary teal color for the close button
+        backgroundColor: PRIMARY_TEAL,
         padding: 10,
         borderRadius: 10,
         marginTop: 20,
@@ -172,5 +208,6 @@ const styles = StyleSheet.create({
 });
 
 export default Dashboard;
+
 
 

@@ -11,8 +11,11 @@ import CapsuleTimeline from "./CapsuleTimeline";
 import PreviewCapsule from "../../components/PreviewCapsule";
 import EditCapsule from "../../components/EditCapsule";
 import MemoryDetail from "../../components/MemoryDetail";
+import MediaBankUpload from "../../components/MediaBankUpload";
+import MediaGallery from "../../components/MediaGallery";
 import VaultMap from "../../components/VaultMap";
 import { UserProvider } from "../../constants/UserContext";
+import MemoryUpload from "./MemoryUpload";
 
 const Stack = createStackNavigator();
 
@@ -40,8 +43,10 @@ export default function Layout() {
                     <Stack.Screen name="EditCapsule" component={EditCapsule} />
                     <Stack.Screen name="CapsuleTimeline" component={CapsuleTimeline} />
                     <Stack.Screen name="MemoryDetail" component={MemoryDetail} />
-                    <Stack.Screen name="VaultMap" component={VaultMap} options={{ title: "Memory Map" }}
-/>
+                    <Stack.Screen name="VaultMap" component={VaultMap} options={{ title: "Memory Map" }} />
+                    <Stack.Screen name="MemoryUpload" component={MemoryUpload} />
+                    <Stack.Screen name="MediaBankUpload" component={MediaBankUpload} />
+                    <Stack.Screen name="MediaGallery" component={MediaGallery} />
 
                 </Stack.Navigator>
             </ProfileProvider>
