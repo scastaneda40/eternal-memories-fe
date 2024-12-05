@@ -5,22 +5,15 @@ import {
     TouchableOpacity,
     StyleSheet,
     ImageBackground,
-    Modal,
     Image,
     ScrollView,
 } from "react-native";
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../constants/supabaseClient";
 import Calendar from "../../components/Calendar";
 
-const PRIMARY_TEAL = "#19747E";
-
 const Dashboard = () => {
-    const navigation = useNavigation();
     const [highlightedMemory, setHighlightedMemory] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchHighlightedMemory = async () => {
@@ -57,19 +50,23 @@ const Dashboard = () => {
                 >
                     <View style={styles.overlay} />
 
+                    {/* Profile Icon */}
                     <TouchableOpacity
-                        style={styles.avatarContainer}
-                        onPress={() => navigation.navigate("UserProfile")}
+                        style={styles.profileIcon}
+                        onPress={() => console.log("Navigate to UserProfile")}
                     >
                         <Image
-                            source={{ uri: "https://images.unsplash.com/photo-1611432579699-484f7990b127?q=80&w=2070&auto=format&fit=crop" }}
+                            source={{
+                                uri: "https://images.unsplash.com/photo-1611432579699-484f7990b127?q=80&w=2070&auto=format&fit=crop",
+                            }}
                             style={styles.avatar}
                         />
                     </TouchableOpacity>
 
+                    {/* Hero Button */}
                     <TouchableOpacity
                         style={styles.heroButton}
-                        onPress={() => navigation.navigate("MemoryVault")}
+                        onPress={() => console.log("Navigate to MemoryVault")}
                     >
                         <Text style={styles.heroButtonText}>View Memory Vault</Text>
                     </TouchableOpacity>
@@ -77,44 +74,29 @@ const Dashboard = () => {
             </View>
 
             {/* Calendar Section */}
-            {/* <View style={styles.calendarContainer}> */}
-                <View style={styles.calendar}>
-                    <Calendar />
-                </View>
-            {/* </View> */}
+            <View style={styles.calendar}>
+                <Calendar />
+            </View>
 
             {/* Action Tiles */}
-           
             <View style={styles.actionsContainer}>
-    {/* Upload Memory */}
-    <TouchableOpacity style={styles.actionTile}>
-        <LinearGradient colors={["#19747E", "#219E97"]} style={styles.gradientBackground}>
-            <Text style={styles.actionText}>Upload Memory</Text>
-        </LinearGradient>
-    </TouchableOpacity>
-
-    {/* Create Profile */}
-    <TouchableOpacity style={styles.actionTile}>
-        <LinearGradient colors={["#FFE48E", "#FFAB64"]} style={styles.gradientBackground}>
-            <Text style={styles.actionText}>Create Profile</Text>
-        </LinearGradient>
-    </TouchableOpacity>
-
-    {/* View Gallery */}
-    <TouchableOpacity style={styles.actionTile}>
-        <LinearGradient colors={["#71C9FF", "#428EFF"]} style={styles.gradientBackground}>
-            <Text style={styles.actionText}>View Gallery</Text>
-        </LinearGradient>
-    </TouchableOpacity>
-
-    {/* Create Capsule */}
-    <TouchableOpacity style={styles.actionTile}>
-        <LinearGradient colors={["#FF6A88", "#F1465A"]} style={styles.gradientBackground}>
-            <Text style={styles.actionText}>Create Capsule</Text>
-        </LinearGradient>
-    </TouchableOpacity>
-</View>
-
+                <TouchableOpacity style={styles.actionTile}>
+                    <Ionicons name="cloud-upload-outline" size={28} color="#19747E" style={styles.tileIcon} />
+                    <Text style={styles.tileText}>Upload Memory</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionTile}>
+                    <Ionicons name="person-add-outline" size={28} color="#FFC55B" style={styles.tileIcon} />
+                    <Text style={styles.tileText}>Create Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionTile}>
+                    <Ionicons name="images-outline" size={28} color="#428EFF" style={styles.tileIcon} />
+                    <Text style={styles.tileText}>View Gallery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionTile}>
+                    <Ionicons name="cube-outline" size={28} color="#F1465A" style={styles.tileIcon} />
+                    <Text style={styles.tileText}>Create Capsule</Text>
+                </TouchableOpacity>
+            </View>
         </ScrollView>
     );
 };
@@ -139,23 +121,24 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
     },
-    avatarContainer: {
+    profileIcon: {
         position: "absolute",
         top: 40,
         left: 20,
+        width: 50,
+        height: 50,
         borderRadius: 25,
         overflow: "hidden",
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: "100%",
+        height: "100%",
     },
     heroButton: {
         position: "absolute",
         bottom: 20,
         alignSelf: "center",
-        backgroundColor: PRIMARY_TEAL,
+        backgroundColor: "#19747E",
         paddingVertical: 12,
         paddingHorizontal: 30,
         borderRadius: 25,
@@ -165,58 +148,47 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
-    calendarContainer: {
+    calendar: {
+        alignItems: "center",
+        marginTop: 20,
+    },
+    actionsContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-evenly",
         margin: 20,
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 20,
+        marginHorizontal: 10
+    },
+    actionTile: {
+        width: "40%",
+        height: 140, // Square-like dimensions
+        borderRadius: 10, // Slightly rounded corners
+        backgroundColor: "#fff", // White background
+        marginBottom: 20,
+        padding: 10,
+        position: "relative",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 6,
     },
-    calendarTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        marginBottom: 10,
+    tileIcon: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+    },
+    tileText: {
+        position: "absolute",
+        bottom: 10,
+        left: 10,
+        fontSize: 14,
+        fontWeight: "500",
         color: "#333",
-    },
-    calendar: {
-        alignItems: "center",
-    },
-    calendarDate: {
-        fontSize: 36,
-        fontWeight: "800",
-        color: "#19747E",
-    },
-    calendarDay: {
-        fontSize: 16,
-        color: "#666",
-    },
-    actionsContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap", // Allows wrapping for a grid layout
-        justifyContent: "space-between", // Adds space between items
-        margin: 20,
-    },
-    actionTile: {
-        width: "45%", // Each tile takes 45% of the container width
-        height: 140,
-        borderRadius: 20,
-        overflow: "hidden",
-        marginBottom: 20, // Adds space between rows
-    },
-    gradientBackground: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    actionText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#fff",
     },
 });
 
 export default Dashboard;
+
+
+
 
