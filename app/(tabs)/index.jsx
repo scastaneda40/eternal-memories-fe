@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     View,
     Text,
@@ -7,15 +7,20 @@ import {
     ImageBackground,
     Image,
     ScrollView,
+    Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { supabase } from "../../constants/supabaseClient";
 import Calendar from "../../components/Calendar";
 
 const Dashboard = () => {
+    const navigation = useNavigation();
     const [highlightedMemory, setHighlightedMemory] = useState(null);
+    const slideAnim = useRef(new Animated.Value(-100)).current; // Slide-in animation
 
     useEffect(() => {
+        // Fetch the highlighted memory
         const fetchHighlightedMemory = async () => {
             try {
                 const { data, error } = await supabase
@@ -35,6 +40,13 @@ const Dashboard = () => {
         };
 
         fetchHighlightedMemory();
+
+        // Slide-in animation
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+        }).start();
     }, []);
 
     return (
@@ -64,12 +76,15 @@ const Dashboard = () => {
                     </TouchableOpacity>
 
                     {/* Hero Button */}
-                    <TouchableOpacity
-                        style={styles.heroButton}
-                        onPress={() => console.log("Navigate to MemoryVault")}
-                    >
-                        <Text style={styles.heroButtonText}>View Memory Vault</Text>
-                    </TouchableOpacity>
+                    <Animated.View style={[styles.heroButtonContainer, { transform: [{ translateX: slideAnim }] }]}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate("MemoryVault")}
+                            style={styles.heroButton}
+                        >
+                            <Text style={styles.heroButtonText}>View Memory Vault</Text>
+                            <Ionicons name="chevron-forward" size={20} color="#fff" style={styles.heroArrowIcon} />
+                        </TouchableOpacity>
+                    </Animated.View>
                 </ImageBackground>
             </View>
 
@@ -80,19 +95,31 @@ const Dashboard = () => {
 
             {/* Action Tiles */}
             <View style={styles.actionsContainer}>
-                <TouchableOpacity style={styles.actionTile}>
+                <TouchableOpacity
+                    style={styles.actionTile}
+                    onPress={() => navigation.navigate("MemoryUpload")}
+                >
                     <Ionicons name="cloud-upload-outline" size={28} color="#19747E" style={styles.tileIcon} />
                     <Text style={styles.tileText}>Upload Memory</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionTile}>
+                <TouchableOpacity
+                    style={styles.actionTile}
+                    onPress={() => navigation.navigate("LovedOneProfile")}
+                >
                     <Ionicons name="person-add-outline" size={28} color="#FFC55B" style={styles.tileIcon} />
                     <Text style={styles.tileText}>Create Profile</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionTile}>
+                <TouchableOpacity
+                    style={styles.actionTile}
+                    onPress={() => navigation.navigate("MediaGallery")}
+                >
                     <Ionicons name="images-outline" size={28} color="#428EFF" style={styles.tileIcon} />
                     <Text style={styles.tileText}>View Gallery</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionTile}>
+                <TouchableOpacity
+                    style={styles.actionTile}
+                    onPress={() => navigation.navigate("CreateCapsule")}
+                >
                     <Ionicons name="cube-outline" size={28} color="#F1465A" style={styles.tileIcon} />
                     <Text style={styles.tileText}>Create Capsule</Text>
                 </TouchableOpacity>
@@ -134,19 +161,30 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-    heroButton: {
+    heroButtonContainer: {
         position: "absolute",
         bottom: 20,
         alignSelf: "center",
+    },
+    heroButton: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: "#19747E",
         paddingVertical: 12,
-        paddingHorizontal: 30,
+        paddingHorizontal: 20,
         borderRadius: 25,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     heroButtonText: {
         color: "#fff",
         fontSize: 16,
         fontWeight: "600",
+    },
+    heroArrowIcon: {
+        marginLeft: 10,
     },
     calendar: {
         alignItems: "center",
@@ -157,13 +195,13 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
         justifyContent: "space-evenly",
         margin: 20,
-        marginHorizontal: 10
+        marginHorizontal: 10,
     },
     actionTile: {
         width: "40%",
-        height: 140, // Square-like dimensions
-        borderRadius: 10, // Slightly rounded corners
-        backgroundColor: "#fff", // White background
+        height: 140,
+        borderRadius: 10,
+        backgroundColor: "#fff",
         marginBottom: 20,
         padding: 10,
         position: "relative",

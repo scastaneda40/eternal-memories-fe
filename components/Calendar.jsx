@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#333", // Dark background for contrast
         borderRadius: 15,
         marginHorizontal: 20,
-        marginTop: 20,
+        marginTop: 10,
     },
     row: {
         flexDirection: "row",
