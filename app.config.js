@@ -15,10 +15,12 @@ export default {
       backgroundColor: "#ffffff",
     },
     ios: {
+      "newArchEnabled": true,
       supportsTablet: true,
-      bundleIdentifier: "com.example.eternal-moments-mobile", // Add this line
+      bundleIdentifier: "com.example.eternal-moments-mobile", // Add a generic bundleIdentifier
     },
     android: {
+      "newArchEnabled": true,
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff",
@@ -30,6 +32,8 @@ export default {
     extra: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+      CLERK_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
     },
   },
 };
+

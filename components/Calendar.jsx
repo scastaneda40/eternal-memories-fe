@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         backgroundColor: "#333", // Dark background for contrast
         borderRadius: 15,
-        marginHorizontal: 20,
+        marginHorizontal: 10,
         marginTop: 10,
     },
     row: {
