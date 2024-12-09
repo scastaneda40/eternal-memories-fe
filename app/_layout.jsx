@@ -1,14 +1,49 @@
 import React from "react";
 import { Stack, Slot } from "expo-router";
+import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { UserProvider } from "../constants/UserContext";
 import { ProfileProvider } from "../constants/ProfileContext";
-import { AuthProvider } from "../constants/AuthContext";
+import { clerkPublishableKey } from "../constants/clerkClient";
+import * as SecureStore from 'expo-secure-store'
+import { TokenCache } from '@clerk/clerk-expo/dist/cache'
+
+
 
 export default function RootLayout() {
+    console.log('duh key', clerkPublishableKey)
+    if (!clerkPublishableKey) {
+        throw new Error(
+          "The Clerk publishable key (EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) is missing."
+        );
+      }
+
+    //   const createTokenCache = (TokenCache) => {
+    //     return {
+    //       getToken: async (key) => {
+    //         try {
+    //           const item = await SecureStore.getItemAsync(key)
+    //           if (item) {
+    //             console.log(`${key} was used 🔐 \n`)
+    //           } else {
+    //             console.log('No values stored under key: ' + key)
+    //           }
+    //           return item
+    //         } catch (error) {
+    //           console.error('secure store get item error: ', error)
+    //           await SecureStore.deleteItemAsync(key)
+    //           return null
+    //         }
+    //       },
+    //       saveToken: (key, token) => {
+    //         return SecureStore.setItemAsync(key, token)
+    //       },
+    //     }
+    //   }
+    
   return (
     <SafeAreaProvider>
-      <AuthProvider>
+      <ClerkProvider publishableKey={clerkPublishableKey}>
         <UserProvider>
           <ProfileProvider>
             <Stack screenOptions={{ headerShown: false }}>
@@ -34,7 +69,8 @@ export default function RootLayout() {
             </Stack>
           </ProfileProvider>
         </UserProvider>
-      </AuthProvider>
+      </ClerkProvider>
     </SafeAreaProvider>
   );
 }
+

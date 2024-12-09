@@ -32,7 +32,7 @@ export default {
     extra: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
-      CLERK_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
     },
   },
 };

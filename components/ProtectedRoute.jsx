@@ -1,37 +1,49 @@
-import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, ActivityIndicator, SafeAreaView, StyleSheet } from "react-native";
+import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
-import { useAuth } from "../constants/AuthContext";
 
 const PRIMARY_TEAL = "#19747E";
 
-function ProtectedRoute({ children }) {
-  const { user, isLoading } = useAuth();
+export default function ProtectedRoute({ children }) {
+  const { isLoaded, userId } = useAuth();
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted && !isLoading && !user) {
-      router.replace("/login");
+    if (isLoaded && !userId) {
+      router.replace("/sign-in");
     }
-  }, [isMounted, isLoading, user, router]);
+  }, [isLoaded, userId, router]);
 
-  if (isLoading || (!user && !isMounted)) {
+  if (!isLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <SafeAreaView style={styles.centeredContainer}>
         <ActivityIndicator size="large" color={PRIMARY_TEAL} />
-      </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <Text style={styles.text}>Redirecting to Sign In...</Text>
+      </SafeAreaView>
     );
   }
 
   return children;
 }
 
-export default ProtectedRoute;
-
-
+const styles = StyleSheet.create({
+  centeredContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  text: {
+    fontSize: 16,
+    color: PRIMARY_TEAL,
+  },
+});
 

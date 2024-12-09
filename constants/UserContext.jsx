@@ -1,29 +1,27 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../constants/supabaseClient';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useUser as useClerkUser } from "@clerk/clerk-expo";
 
 const UserContext = createContext(null);
 
 export const UserProvider = ({ children }) => {
+  const { user: clerkUser, isSignedIn } = useClerkUser();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    };
+    console.log("Clerk user:", clerkUser); // Debug log to check clerk user
+    console.log("User is signed in:", isSignedIn);
 
-    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    fetchUser();
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
+    if (clerkUser && isSignedIn) {
+      setUser({
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || null,
+      });
+    } else {
+      setUser(null);
+    }
+    setIsLoading(false);
+  }, [clerkUser, isSignedIn]);
 
   return (
     <UserContext.Provider value={{ user, isLoading }}>
