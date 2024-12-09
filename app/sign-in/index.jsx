@@ -1,25 +1,54 @@
+import React, { useState } from 'react';
+import {
+  Text,
+  TextInput,
+  View,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useSignIn } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
-import { Text, TextInput, View, SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
-import React from 'react';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
 
-  const [emailAddress, setEmailAddress] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [emailAddress, setEmailAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
+
+  const validateEmail = (email) => {
+    if (!email.includes('@')) {
+      setErrors((prev) => ({ ...prev, email: 'Invalid email address.' }));
+    } else {
+      setErrors((prev) => ({ ...prev, email: '' }));
+    }
+  };
+
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      setErrors((prev) => ({
+        ...prev,
+        password: 'Password must be at least 8 characters.',
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, password: '' }));
+    }
+  };
 
   const onSignInPress = async () => {
-    if (!isLoaded) {
+    if (!isLoaded || errors.email || errors.password) {
       return;
     }
-  
+
     try {
-      const signInAttempt = await signIn.create({ identifier: emailAddress, password });
+      const signInAttempt = await signIn.create({
+        identifier: emailAddress,
+        password,
+      });
       if (signInAttempt.status === 'complete') {
         await setActive({ session: signInAttempt.createdSessionId });
-        console.log("Session set. Redirecting...");
         router.replace('/');
       } else {
         console.error(JSON.stringify(signInAttempt, null, 2));
@@ -28,34 +57,58 @@ export default function SignInScreen() {
       console.error(JSON.stringify(error, null, 2));
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Welcome Back!</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Email Address"
-        placeholderTextColor="#aaa"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-      />
-      <TextInput
-        style={styles.input}
-        value={password}
-        placeholder="Password"
-        placeholderTextColor="#aaa"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      <TouchableOpacity style={styles.button} onPress={onSignInPress}>
-        <Text style={styles.buttonText}>Sign In</Text>
-      </TouchableOpacity>
-      <View style={styles.linkContainer}>
-        <Text style={styles.linkText}>Don't have an account?</Text>
-        <Link href="/sign-up" style={styles.link}>
-          <Text style={styles.linkTextHighlight}>Sign up</Text>
-        </Link>
+      <Text style={styles.welcomeHeader}>Welcome Back</Text>
+      <Text style={styles.description}>
+        Sign in to relive and preserve your cherished moments.
+      </Text>
+      <View style={styles.formContainer}>
+        <TextInput
+          style={[styles.input, errors.email && styles.inputError]}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="Email Address"
+          placeholderTextColor="#aaa"
+          onChangeText={(email) => {
+            setEmailAddress(email);
+            validateEmail(email);
+          }}
+        />
+        {errors.email ? (
+          <Text style={styles.errorText}>{errors.email}</Text>
+        ) : null}
+        <TextInput
+          style={[styles.input, errors.password && styles.inputError]}
+          value={password}
+          placeholder="Password"
+          placeholderTextColor="#aaa"
+          secureTextEntry={true}
+          onChangeText={(password) => {
+            setPassword(password);
+            validatePassword(password);
+          }}
+        />
+        {errors.password ? (
+          <Text style={styles.errorText}>{errors.password}</Text>
+        ) : null}
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (errors.email || errors.password) && styles.buttonDisabled,
+          ]}
+          onPress={onSignInPress}
+          disabled={!!errors.email || !!errors.password}
+        >
+          <Text style={styles.buttonText}>Sign In</Text>
+        </TouchableOpacity>
+        <View style={styles.linkContainer}>
+          <Text style={styles.linkText}>Don't have an account?</Text>
+          <Link href="/sign-up" style={styles.link}>
+            <Text style={styles.linkTextHighlight}>Sign up</Text>
+          </Link>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -67,13 +120,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 20,
   },
-  header: {
-    fontSize: 24,
+  welcomeHeader: {
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
+    color: '#19747E',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 25,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  formContainer: {
+    width: '90%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginTop: 20,
   },
   input: {
     width: '100%',
@@ -82,9 +149,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 8,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 14,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
   },
   button: {
     width: '100%',
@@ -92,6 +168,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#aaa',
   },
   buttonText: {
     color: '#fff',
