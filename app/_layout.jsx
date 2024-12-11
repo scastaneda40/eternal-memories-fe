@@ -11,7 +11,6 @@ import { TokenCache } from '@clerk/clerk-expo/dist/cache'
 
 
 export default function RootLayout() {
-    console.log('duh key', clerkPublishableKey)
     if (!clerkPublishableKey) {
         throw new Error(
           "The Clerk publishable key (EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) is missing."
@@ -46,9 +45,9 @@ export default function RootLayout() {
       <ClerkProvider publishableKey={clerkPublishableKey}>
         <UserProvider>
           <ProfileProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: true, headerBackTitleVisible: false }}>
               {/* Main Tab Navigator */}
-              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
               {/* Additional Routes */}
               <Stack.Screen name="MemoryChat" />
               <Stack.Screen name="AddMedia" />

@@ -6,48 +6,99 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { supabase } from "../../constants/supabaseClient";
-import { useProfile } from "../../constants/ProfileContext";
 import { useUser } from "../../constants/UserContext";
 import { useNavigation } from "@react-navigation/native";
 
 const MemoryVault = () => {
   const [memories, setMemories] = useState([]);
-  const { userId } = useUser(); // Get the user_id from context
-  const { profile } = useProfile(); // Get the profile from context
+  const [profiles, setProfiles] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useUser();
   const navigation = useNavigation();
 
+  const userId = user?.id;
+
   useEffect(() => {
-    const fetchMemories = async () => {
-      if (!profile || !userId) {
-        console.error("Profile or user ID is missing");
-        return;
+    if (!userId) return; // Wait until userId is available
+
+    const fetchProfiles = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("profile")
+          .select("*")
+          .eq("user_id", userId);
+
+        if (error) {
+          console.error("Error fetching profiles:", error.message);
+        } else {
+          setProfiles(data);
+          if (data.length > 0) {
+            setSelectedProfile(data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching profiles:", error);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      const { data, error } = await supabase
-        .from("memories")
-        .select("*")
-        .eq("user_id", userId) // Filter by user_id
-        .eq("profile_id", profile.id) // Filter by profile_id
-        .order("created_at", { ascending: false }); // Sort by most recent
+    fetchProfiles();
+  }, [userId]);
 
-      if (error) {
-        console.error("Error fetching memories:", error.message);
-      } else {
-        setMemories(data);
+  useEffect(() => {
+    if (!selectedProfile || !userId) return; // Wait until both userId and selectedProfile are available
+
+    const fetchMemories = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("memories")
+          .select(`
+            *,
+            memory_media (
+              media_bank (
+                url
+              )
+            )
+          `)
+          .eq("user_id", userId)
+          .eq("profile_id", selectedProfile)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching memories:", error.message);
+        } else {
+          const formattedMemories = data.map((memory) => {
+            const file_urls = memory.memory_media.map(
+              (media) => media.media_bank.url
+            );
+            return { ...memory, file_urls };
+          });
+          setMemories(formattedMemories);
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching memories:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchMemories();
-  }, [userId, profile]); // Re-run if userId or profile changes
+  }, [selectedProfile, userId]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "Date not available";
     try {
       const options = { year: "numeric", month: "short", day: "numeric" };
       const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, options); // Localized date
+      return date.toLocaleDateString(undefined, options);
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
@@ -55,32 +106,81 @@ const MemoryVault = () => {
   };
 
   const renderMemory = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => navigation.navigate("MemoryDetail", { memory: item })} // Pass memory data
-      style={styles.memoryContainer}
-    >
-      <Image source={{ uri: item.file_url }} style={styles.memoryImage} />
-      <Text style={styles.memoryTitle}>{item.title || "Untitled Memory"}</Text>
+    <View style={styles.memoryContainer}>
+      <FlatList
+        data={item.file_urls || []}
+        horizontal
+        keyExtractor={(url, index) => `${item.id}-image-${index}`}
+        showsHorizontalScrollIndicator={true}
+        renderItem={({ item: imageUrl }) => (
+          <Image source={{ uri: imageUrl }} style={styles.memoryImage} />
+        )}
+      />
+      <TouchableOpacity
+        onPress={() => navigation.navigate("MemoryDetail", { memory: item })}
+      >
+        <Text style={styles.memoryTitle}>
+          {item.title || "Untitled Memory"}
+        </Text>
+      </TouchableOpacity>
       <Text style={styles.memoryDate}>{formatDate(item.actual_date)}</Text>
       <Text numberOfLines={2} style={styles.memoryDescription}>
         {item.description || "No description provided."}
       </Text>
-    </TouchableOpacity>
+    </View>
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#19747E" />
+        <Text style={styles.loaderText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.button, styles.mapButton]}
-        onPress={() => navigation.navigate("VaultMap", { memories: memories || [] })}
+        style={styles.mapButton}
+        onPress={() =>
+          navigation.navigate("VaultMap", { memories: memories || [] })
+        }
       >
-        <Text style={styles.buttonText}>View Map</Text>
+        <Text style={styles.mapButtonText}>View Map</Text>
       </TouchableOpacity>
+      <View style={styles.dropdownContainer}>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setDropdownVisible(!dropdownVisible)}
+        >
+          <Text style={styles.dropdownButtonText}>
+            {profiles.find((p) => p.id === selectedProfile)?.name ||
+              "Select Profile"}
+          </Text>
+        </TouchableOpacity>
+        {dropdownVisible && (
+          <View style={styles.dropdownMenu}>
+            {profiles.map((profile) => (
+              <TouchableOpacity
+                key={profile.id}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setSelectedProfile(profile.id);
+                  setDropdownVisible(false);
+                }}
+              >
+                <Text>{profile.name || "Unnamed Profile"}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
       <FlatList
         data={memories}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderMemory}
-        contentContainerStyle={styles.listContent} // Style for padding/margin
+        contentContainerStyle={styles.listContent}
       />
     </View>
   );
@@ -90,6 +190,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loaderText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#555",
+  },
+  mapButton: {
+    backgroundColor: "#19747E",
+    paddingVertical: 15,
+    alignItems: "center",
+    marginVertical: 10,
+    marginHorizontal: 20,
+    borderRadius: 10,
+  },
+  mapButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  dropdownContainer: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+  },
+  dropdownButton: {
+    backgroundColor: "#19747E",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  dropdownButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  dropdownMenu: {
+    backgroundColor: "#f9f9f9",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginTop: 5,
+  },
+  dropdownItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   listContent: {
     paddingHorizontal: 20,
@@ -105,9 +255,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
   },
   memoryImage: {
-    width: "100%",
+    width: 300,
     height: 200,
     borderRadius: 10,
+    marginRight: 10,
   },
   memoryTitle: {
     fontSize: 18,
@@ -126,21 +277,15 @@ const styles = StyleSheet.create({
     color: "#555",
     marginBottom: 5,
   },
-  button: {
-    backgroundColor: "#19747E",
-    padding: 12,
-    margin: 15,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
 });
 
 export default MemoryVault;
+
+
+
+
+
+
 
 
 

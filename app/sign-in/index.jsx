@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Text,
   TextInput,
@@ -7,19 +7,27 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { useSignIn } from "@clerk/clerk-expo";
+import { useSignIn, useUser as useClerkUser } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import { useUser } from "../../constants/UserContext";
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const { user: clerkUser } = useClerkUser();
+  const { setUser } = useUser();
   const router = useRouter();
-  const { setUser } = useUser(); // Access `setUser` here
-
 
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (clerkUser?.id) {
+      console.log("Clerk user updated:", clerkUser);
+      proceedWithBackendRequest(clerkUser.id); // Call backend once user is available
+    }
+  }, [clerkUser]);
 
   const validateEmail = (email) => {
     if (!email.includes("@")) {
@@ -41,61 +49,69 @@ export default function SignInScreen() {
   };
 
   const onSignInPress = async () => {
-    if (!isLoaded || errors.email || errors.password) {
+    if (!isLoaded || errors.email || errors.password || isLoading) {
       return;
     }
-  
+
+    setIsLoading(true);
+
     try {
+      console.log("Attempting to sign in...");
       const signInAttempt = await signIn.create({
         identifier: emailAddress,
         password,
       });
-  
+
       console.log("Sign-in attempt:", signInAttempt);
-  
+
       if (signInAttempt.status === "complete") {
+        console.log("Sign-in complete, activating session...");
         await setActive({ session: signInAttempt.createdSessionId });
-  
-        const userId = signInAttempt.createdSessionId;
-        const payload = {
-          clerk_user_id: userId,
-          email: emailAddress,
-        };
-  
-        console.log("Payload being sent to backend:", payload);
-  
-        const response = await fetch("http://localhost:5000/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-  
-        console.log("Raw response from backend:", response);
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-  
-        // Parse the response JSON safely
-        const data = await response.json();
-        console.log("Parsed response from backend:", data.id);
-  
-        // Update UserContext
-        setUser({ id: data.id });
-  
-        // Navigate to the dashboard
-        router.replace("/");
+        // Backend request will be triggered by useEffect when clerkUser updates
       } else {
-        console.error("Sign-in not completed:", JSON.stringify(signInAttempt, null, 2));
+        console.error("Sign-in not completed:", JSON.stringify(signInAttempt));
       }
     } catch (error) {
-      console.error("Sign-in error:", error);
+      console.error("Sign-in error:", error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  
+
+  const proceedWithBackendRequest = async (clerkUserId) => {
+    try {
+      const payload = {
+        clerk_user_id: clerkUserId,
+        email: emailAddress,
+      };
+
+      console.log("Payload being sent to backend:", payload);
+
+      const response = await fetch("http://localhost:5000/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text(); // Fallback to text if JSON fails
+        console.error("Failed to fetch user:", errorData);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Parsed response from backend:", data);
+
+      setUser({ id: data.id });
+      console.log("User set in context:", data.id);
+      router.replace("/");
+    } catch (err) {
+      console.error("Error communicating with backend:", err.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.welcomeHeader}>Welcome Back</Text>
@@ -134,12 +150,15 @@ export default function SignInScreen() {
         <TouchableOpacity
           style={[
             styles.button,
-            (errors.email || errors.password) && styles.buttonDisabled,
+            (errors.email || errors.password || isLoading) &&
+              styles.buttonDisabled,
           ]}
           onPress={onSignInPress}
-          disabled={!!errors.email || !!errors.password}
+          disabled={!!errors.email || !!errors.password || isLoading}
         >
-          <Text style={styles.buttonText}>Sign In</Text>
+          <Text style={styles.buttonText}>
+            {isLoading ? "Signing In..." : "Sign In"}
+          </Text>
         </TouchableOpacity>
         <View style={styles.linkContainer}>
           <Text style={styles.linkText}>Don't have an account?</Text>
@@ -229,3 +248,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
+
