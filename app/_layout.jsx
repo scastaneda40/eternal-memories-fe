@@ -64,6 +64,7 @@ export default function RootLayout() {
               <Stack.Screen name="MediaBankUpload" />
               <Stack.Screen name="MediaGallery" options={{ title: "Gallery" }} />
               <Stack.Screen name="login" options={{ title: "Log In" }} />
+              <Stack.Screen name="SelectLocationScreen" options={{ title: "Select Location" }}   initialParams={{ currentAddress: "", currentLocation: null }} />
               {/* Render Child Routes */}
               <Slot />
             </Stack>
