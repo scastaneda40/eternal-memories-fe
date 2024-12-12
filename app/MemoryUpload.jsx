@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -9,6 +9,7 @@ import {
   Text,
   Modal,
   Image,
+  FlatList
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import Geocoder from "react-native-geocoding";
@@ -19,12 +20,20 @@ import { useUser } from "../constants/UserContext";
 import { useProfile } from "../constants/ProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { supabase } from "../constants/supabaseClient";
+
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyBILRnNABNjR-C8w8GZYinp_uZBouZJHrc";
 Geocoder.init(GOOGLE_MAPS_API_KEY);
 
 const MemoryUpload = () => {
   const [isMapVisible, setIsMapVisible] = useState(false);
+  const [isProfileDropdownVisible, setIsProfileDropdownVisible] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+
+
   const [region, setRegion] = useState({
     latitude: 37.7749,
     longitude: -122.4194,
@@ -35,7 +44,7 @@ const MemoryUpload = () => {
     latitude: 37.7749,
     longitude: -122.4194,
   });
-  const [manualAddress, setManualAddress] = useState("None");
+  const [manualAddress, setManualAddress] = useState("");
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
   const [description, setDescription] = useState("");
@@ -46,6 +55,52 @@ const MemoryUpload = () => {
   const { user } = useUser();
   const { profile: globalProfile } = useProfile();
   const navigation = useNavigation();
+
+  const userId = user?.id;
+
+  useEffect(() => {
+    console.log("Current selected profile:", selectedProfile);
+  }, [selectedProfile]);
+  
+  useEffect(() => {
+    if (!userId) return;
+  
+    const fetchProfiles = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("profile")
+          .select("*")
+          .eq("user_id", userId);
+  
+        if (error) {
+          console.error("Error fetching profiles:", error.message);
+        } else {
+          console.log("Fetched profiles:", data);
+          setProfiles(data);
+          if (data.length > 0) {
+            setSelectedProfile(data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching profiles:", error);
+      }
+    };
+  
+    fetchProfiles();
+  }, [userId]);
+  
+
+  const handleProfileSelection = (profile) => {
+    console.log("Selected Profile:", profile);
+    setSelectedProfile(profile.id);
+    setDropdownVisible(false); // Close the dropdown
+    Toast.show({
+      type: "success",
+      // text1: "Profile Selected",
+      text1: `Current Profile: ${profile.name}`,
+    });
+  };
+
 
   const handleMapPress = (event) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -105,10 +160,9 @@ const MemoryUpload = () => {
   };
 
   const handleUpload = async () => {
-    // Check for missing fields
-
     console.log("User:", user);
-    console.log("Global Profile:", globalProfile);
+    console.log("Selected Profile:", selectedProfile);
+  
     if (!user?.id) {
       Toast.show({
         type: "error",
@@ -118,7 +172,7 @@ const MemoryUpload = () => {
       return;
     }
   
-    if (!globalProfile?.id) {
+    if (!selectedProfile) {
       Toast.show({
         type: "error",
         text1: "Upload Error",
@@ -157,7 +211,7 @@ const MemoryUpload = () => {
     try {
       const formData = new FormData();
       formData.append("user_id", user.id);
-      formData.append("profile_id", globalProfile.id);
+      formData.append("profile_id", selectedProfile);
       formData.append("title", title.trim());
       formData.append("tags", tags.trim());
       formData.append("description", description.trim());
@@ -187,17 +241,71 @@ const MemoryUpload = () => {
   
       if (!response.ok) throw new Error("Failed to upload memory");
   
-      Toast.show({ type: "success", text1: "Success", text2: "Memory uploaded!" });
-      navigation.goBack();
+      // Show success notification
+      Toast.show({
+        type: "success",
+        text1: "Memory Uploaded!",
+        text2: "You can now add another memory.",
+      });
+  
+      // Clear form fields
+      setTitle("");
+      setTags("");
+      setDescription("");
+      setManualAddress("");
+      setMedia([]);
+      setDate(new Date());
+      setMarker({ latitude: 37.7749, longitude: -122.4194 }); // Reset marker to default
+      setRegion({
+        latitude: 37.7749,
+        longitude: -122.4194,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
     } catch (error) {
       console.error("Upload error:", error);
       Toast.show({ type: "error", text1: "Upload Failed", text2: error.message });
     }
   };
   
+  
+  
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView style={styles.scrollContainer}>
+      <View style={styles.dropdownContainer}>
+      <TouchableOpacity
+  style={styles.selectedProfileButton}
+  onPress={() => setDropdownVisible(!dropdownVisible)}
+>
+  <Text style={styles.selectedProfileButtonText}>
+    {profiles.find((p) => p.id === selectedProfile)?.name || "Select Profile"}
+  </Text>
+</TouchableOpacity>
+        
+{dropdownVisible ? (
+  <View style={styles.dropdownMenu}>
+    {profiles.length > 0 ? (
+      profiles.map((profile) => (
+        <TouchableOpacity
+          key={profile.id}
+          style={styles.dropdownItem}
+          onPress={() => handleProfileSelection(profile)}
+        >
+          <Text style={styles.dropdownItemText}>
+            {profile.name || "Unnamed Profile"}
+          </Text>
+        </TouchableOpacity>
+      ))
+    ) : (
+      <Text>No profiles available</Text>
+    )}
+  </View>
+) : null}
+
+
+      </View>
+
         <Text style={styles.title}>Create a Memory</Text>
         <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
         <TextInput style={styles.input} placeholder="Tags (comma-separated)" value={tags} onChangeText={setTags} />
@@ -264,6 +372,15 @@ const MemoryUpload = () => {
             <Marker coordinate={marker} />
           </MapView>
           <View style={styles.footer}>
+
+          <View style={{ alignItems: "center" }}>
+            <Text style={styles.inlineAddressText}>
+              {manualAddress === "None" ? "No address selected" : manualAddress}
+            </Text>
+         </View>
+
+  <View style={styles.buttonRow}>
+
   <TouchableOpacity
     style={[styles.button, !manualAddress && styles.disabledButton]}
     onPress={() => setIsMapVisible(false)}
@@ -277,6 +394,8 @@ const MemoryUpload = () => {
   >
     <Text style={styles.cancelButtonText}>Cancel</Text>
   </TouchableOpacity>
+  </View>
+
 </View>
         </SafeAreaView>
       </Modal>
@@ -294,6 +413,35 @@ const styles = StyleSheet.create({
   scrollContainer: {
     padding: 20,
   },
+    selectedProfileButton: {
+      padding: 10,
+      backgroundColor: "#19747E", // Button color
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 10, // Space below the button
+    },
+    selectedProfileButtonText: {
+      color: "#fff", // Text color
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    dropdownMenu: {
+      backgroundColor: "#f9f9f9", // Light background for dropdown
+      borderWidth: 1,
+      borderColor: "#ddd",
+      borderRadius: 8,
+      marginTop: 5,
+    },
+    dropdownItem: {
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: "#ddd",
+    },
+    dropdownItemText: {
+      fontSize: 16,
+      color: "#333",
+    },  
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -360,6 +508,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  buttonRow: {
+    flexDirection: "row", // Side-by-side buttons
+    justifyContent: "space-between", // Space between buttons
+    width: "100%", // Occupy full width
+    marginTop: 10,
+  },
+  inlineAddressText: {
+    fontSize: 14,
+    color: "#000", // Ensure visible text color
+    textAlign: "center",
+    marginBottom: 5,
+  },
   map: {
     flex: 1,
   },
@@ -368,8 +528,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     borderTopWidth: 1,
     borderColor: "#ddd",
-    flexDirection: "row", // Align buttons horizontally
-    justifyContent: "space-between", // Space out the buttons
+    flexDirection: "column", // Align buttons horizontally
+    alignItems: "center"
   },
   buttonContainer: {
     flexDirection: "row",
