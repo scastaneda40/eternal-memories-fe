@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   TextInput,
@@ -10,54 +10,85 @@ import {
   Modal,
   Image,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import Geocoder from "react-native-geocoding";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
-import { Picker } from "@react-native-picker/picker"; // Profile Dropdown
-import { useUser } from "../constants/UserContext";
-import { supabase } from "../constants/supabaseClient";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Carousel from "react-native-reanimated-carousel";
+import { useUser } from "../constants/UserContext";
+import { useProfile } from "../constants/ProfileContext";
+import { useNavigation } from "@react-navigation/native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyBILRnNABNjR-C8w8GZYinp_uZBouZJHrc";
+Geocoder.init(GOOGLE_MAPS_API_KEY);
 
 const MemoryUpload = () => {
   const [isMapVisible, setIsMapVisible] = useState(false);
+  const [region, setRegion] = useState({
+    latitude: 37.7749,
+    longitude: -122.4194,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const [marker, setMarker] = useState({
+    latitude: 37.7749,
+    longitude: -122.4194,
+  });
   const [manualAddress, setManualAddress] = useState("None");
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
   const [description, setDescription] = useState("");
+  const [search, setSearch] = useState("");
   const [media, setMedia] = useState([]);
   const [date, setDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [profiles, setProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState(null);
   const { user } = useUser();
+  const { profile: globalProfile } = useProfile();
+  const navigation = useNavigation();
 
-  const userId = user?.id;
+  const handleMapPress = (event) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setMarker({ latitude, longitude });
+    reverseGeocode(latitude, longitude);
+  };
 
-  // Fetch profiles for the dropdown
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      if (!userId) {
-        console.error("User ID is missing");
-        return;
-      }
+  const reverseGeocode = async (latitude, longitude) => {
+    try {
+      const response = await Geocoder.from(latitude, longitude);
+      const formattedAddress = response.results[0].formatted_address;
+      setManualAddress(formattedAddress);
+    } catch (error) {
+      console.error("Error during reverse geocoding:", error);
+    }
+  };
 
-      const { data, error } = await supabase
-        .from("profile")
-        .select("*")
-        .eq("user_id", userId);
+  const handleSearch = async () => {
+    if (!search.trim()) return;
 
-      if (error) {
-        console.error("Error fetching profiles:", error.message);
-      } else {
-        setProfiles(data);
-        if (data.length > 0) {
-          setSelectedProfile(data[0].id); // Set the first profile as default
-        }
-      }
-    };
+    try {
+      const geocode = await Geocoder.from(search);
+      const location = geocode.results[0].geometry.location;
+      const formattedAddress = geocode.results[0].formatted_address;
 
-    fetchProfiles();
-  }, [userId]);
+      setRegion({
+        latitude: location.lat,
+        longitude: location.lng,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+      setMarker({
+        latitude: location.lat,
+        longitude: location.lng,
+      });
+      setManualAddress(formattedAddress);
+    } catch (error) {
+      console.error("Error during geocoding:", error);
+    }
+  };
+
+
+
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -66,47 +97,78 @@ const MemoryUpload = () => {
       quality: 1,
     });
     if (!result.canceled) {
-      setMedia((prev) => [...prev, ...result.assets.map((asset) => ({ uri: asset.uri }))]);
+      setMedia((prev) => [
+        ...prev,
+        ...result.assets.map((asset) => ({ uri: asset.uri })),
+      ]);
     }
   };
 
   const handleUpload = async () => {
+    // Check for missing fields
+
+    console.log("User:", user);
+    console.log("Global Profile:", globalProfile);
+    if (!user?.id) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "User ID is missing. Please log in again.",
+      });
+      return;
+    }
+  
+    if (!globalProfile?.id) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "Profile ID is missing. Please select a profile.",
+      });
+      return;
+    }
+  
+    if (!title.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "Title is required.",
+      });
+      return;
+    }
+  
+    if (!description.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "Description is required.",
+      });
+      return;
+    }
+  
+    if (media.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "At least one media file is required.",
+      });
+      return;
+    }
+  
     try {
-      if (!userId) {
-        Toast.show({
-          type: "error",
-          text1: "User Missing",
-          text2: "Please sign in to upload a memory.",
-        });
-        return;
-      }
-
-      if (!selectedProfile) {
-        Toast.show({
-          type: "error",
-          text1: "Profile Missing",
-          text2: "Please select a profile to upload the memory.",
-        });
-        return;
-      }
-
-      if (!title || !description || media.length === 0) {
-        Toast.show({
-          type: "error",
-          text1: "Missing Information",
-          text2: "Please provide a title, description, and at least one media file.",
-        });
-        return;
-      }
-
       const formData = new FormData();
-      formData.append("user_id", userId);
-      formData.append("profile_id", selectedProfile);
-      formData.append("title", title);
-      formData.append("tags", tags);
-      formData.append("description", description);
+      formData.append("user_id", user.id);
+      formData.append("profile_id", globalProfile.id);
+      formData.append("title", title.trim());
+      formData.append("tags", tags.trim());
+      formData.append("description", description.trim());
       formData.append("actual_date", date.toISOString());
-
+      formData.append("address", manualAddress || "");
+      formData.append(
+        "location",
+        JSON.stringify({ latitude: marker.latitude, longitude: marker.longitude })
+      );
+  
+      // Add media files to FormData
       media.forEach((item, index) => {
         const fileName = item.uri.split("/").pop();
         const fileType = fileName.split(".").pop();
@@ -116,74 +178,29 @@ const MemoryUpload = () => {
           type: `image/${fileType}`,
         });
       });
-
+  
       const response = await fetch("http://localhost:5000/upload", {
         method: "POST",
         body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to upload memory.");
-      }
-
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: "Memory uploaded successfully!",
-      });
-
-      setTitle("");
-      setTags("");
-      setDescription("");
-      setMedia([]);
+  
+      if (!response.ok) throw new Error("Failed to upload memory");
+  
+      Toast.show({ type: "success", text1: "Success", text2: "Memory uploaded!" });
+      navigation.goBack();
     } catch (error) {
       console.error("Upload error:", error);
-      Toast.show({
-        type: "error",
-        text1: "Upload Failed",
-        text2: error.message || "An error occurred while uploading.",
-      });
+      Toast.show({ type: "error", text1: "Upload Failed", text2: error.message });
     }
   };
-
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>Create a Memory</Text>
-
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Select Profile:</Text>
-          <Picker
-            selectedValue={selectedProfile}
-            onValueChange={(itemValue) => setSelectedProfile(itemValue)}
-            style={styles.dropdown}
-          >
-            {profiles.map((profile) => (
-              <Picker.Item
-                key={profile.id}
-                label={profile.name || "Unnamed Profile"}
-                value={profile.id}
-              />
-            ))}
-          </Picker>
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Title"
-          value={title}
-          onChangeText={setTitle}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Tags (comma-separated)"
-          value={tags}
-          onChangeText={setTags}
-        />
+        <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
+        <TextInput style={styles.input} placeholder="Tags (comma-separated)" value={tags} onChangeText={setTags} />
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Description"
@@ -191,11 +208,7 @@ const MemoryUpload = () => {
           onChangeText={setDescription}
           multiline
         />
-
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => setDatePickerVisibility(true)}
-        >
+        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={() => setDatePickerVisibility(true)}>
           <Text style={styles.buttonText}>Select Date</Text>
         </TouchableOpacity>
         <Text style={styles.dateText}>{date.toDateString()}</Text>
@@ -208,14 +221,9 @@ const MemoryUpload = () => {
           }}
           onCancel={() => setDatePickerVisibility(false)}
         />
-
-        <TouchableOpacity
-          style={[styles.button, styles.neutralButton]}
-          onPress={pickImage}
-        >
-          <Text style={styles.buttonText}>Select Media</Text>
+        <TouchableOpacity style={[styles.button, styles.neutralButton]} onPress={pickImage}>
+          <Text style={styles.buttonText}>Import Media</Text>
         </TouchableOpacity>
-
         {media.length > 0 && (
           <View style={styles.carouselContainer}>
             <Carousel
@@ -223,31 +231,60 @@ const MemoryUpload = () => {
               width={300}
               height={200}
               data={media}
-              scrollAnimationDuration={1000}
               renderItem={({ item }) => (
                 <View style={styles.carouselItem}>
-                  <Image
-                    source={{ uri: item.uri }}
-                    style={styles.mediaImage}
-                    resizeMode="cover"
-                  />
+                  <Image source={{ uri: item.uri }} style={styles.mediaImage} />
                 </View>
               )}
             />
           </View>
         )}
-
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleUpload}
-        >
+        <Text style={styles.addressText}>Selected Address: {manualAddress}</Text>
+        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={() => setIsMapVisible(true)}>
+          <Text style={styles.buttonText}>Select Address</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleUpload}>
           <Text style={styles.buttonText}>Upload Memory</Text>
         </TouchableOpacity>
       </ScrollView>
+      <Modal visible={isMapVisible} animationType="slide" transparent={true}>
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Search for a location"
+              value={search}
+              onChangeText={setSearch}
+            />
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+              <Text style={styles.searchButtonText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+          <MapView style={styles.map} region={region} onPress={handleMapPress}>
+            <Marker coordinate={marker} />
+          </MapView>
+          <View style={styles.footer}>
+  <TouchableOpacity
+    style={[styles.button, !manualAddress && styles.disabledButton]}
+    onPress={() => setIsMapVisible(false)}
+    disabled={!manualAddress} // Disable button if no address is selected
+  >
+    <Text style={styles.buttonText}>Confirm Location</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.cancelButton}
+    onPress={() => setIsMapVisible(false)}
+  >
+    <Text style={styles.cancelButtonText}>Cancel</Text>
+  </TouchableOpacity>
+</View>
+        </SafeAreaView>
+      </Modal>
       <Toast />
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -263,63 +300,130 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: "#333",
   },
-  dropdownContainer: {
-    marginBottom: 15,
-  },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  dropdown: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-  },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 12,
+    paddingVertical: 12, // Match button height
     fontSize: 16,
-    marginBottom: 10,
   },
   textArea: {
     height: 80,
     textAlignVertical: "top",
   },
+  addressText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+  },
   button: {
     backgroundColor: "#19747E",
-    paddingVertical: 15,
+    paddingVertical: 15, // Consistent vertical padding
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: "center",
-    marginBottom: 15,
+    justifyContent: "center",
+    flex: 1, // Ensure equal width for both buttons
+    marginHorizontal: 5,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  carouselContainer: {
-    marginVertical: 20,
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center", // Center items vertically
+    justifyContent: "space-between", // Distribute space evenly
+    padding: 10,
+    backgroundColor: "#f4f4f4",
+  },
+  searchButton: {
+    backgroundColor: "#19747E",
+    paddingHorizontal: 15,
+    paddingVertical: 13, // Match input height
+    borderRadius: 8,
+    justifyContent: "center",
     alignItems: "center",
+    height: "auto", // Ensure height matches dynamically
+    marginLeft: 10,
+  },  
+  searchButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  map: {
+    flex: 1,
+  },
+  footer: {
+    padding: 15,
+    backgroundColor: "#f9f9f9",
+    borderTopWidth: 1,
+    borderColor: "#ddd",
+    flexDirection: "row", // Align buttons horizontally
+    justifyContent: "space-between", // Space out the buttons
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center", // Ensures vertical alignment of both buttons
+    marginTop: 10,
+    gap: 10, // Space between the buttons
+  },
+  disabledButton: {
+    backgroundColor: "#aaa",
+  },
+  cancelButton: {
+    backgroundColor: "#fff",
+    padding: 15, // Match Confirm Location button padding
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    justifyContent: "center",
+    alignItems: "center",
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  cancelButtonText: {
+    color: "#333",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  neutralButton: {
+    backgroundColor: "#BBBBBB", // Neutral grey color
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  carouselContainer: {
+    justifyContent: 'center', // Centers content vertically (useful if container is tall)
+    alignItems: 'center', // Centers content horizontally
+    marginVertical: 20, // Add spacing above and below the carousel
   },
   carouselItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',
     borderRadius: 8,
-    overflow: "hidden",
+    overflow: 'hidden',
     width: 300,
     height: 200,
+  }, 
+   mediaImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  mediaImage: {
-    width: "100%",
-    height: "100%",
-  },
+
 });
 
 export default MemoryUpload;
-
-
-
