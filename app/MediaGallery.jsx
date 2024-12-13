@@ -14,6 +14,8 @@ import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../constants/supabaseClient";
 import { useUser } from "../constants/UserContext";
+import { Video } from "expo-av";
+
 
 const MediaBankGallery = () => {
   const { user } = useUser();
@@ -70,7 +72,10 @@ useEffect(() => {
 
 
 const getMediaType = (file) => {
+  console.log("Analyzing file for media type:", file);
+
   if (file.mimeType) {
+    console.log(`MIME type found: ${file.mimeType}`);
     if (file.mimeType.startsWith("image/")) {
       return "photo";
     } else if (file.mimeType.startsWith("video/")) {
@@ -80,8 +85,10 @@ const getMediaType = (file) => {
     }
   }
 
-  // Fallback to file extension
+  // Log the fallback process if MIME type isn't available
   const extension = file.uri.split('.').pop().toLowerCase();
+  console.log(`File extension detected: .${extension}`);
+
   if (["jpg", "jpeg", "png", "gif"].includes(extension)) {
     return "photo";
   } else if (["mp4", "mov", "avi"].includes(extension)) {
@@ -90,6 +97,7 @@ const getMediaType = (file) => {
     return "audio";
   }
 
+  console.log("Unable to determine media type. Returning 'unknown'.");
   return "unknown";
 };
 
@@ -98,32 +106,37 @@ const pickMedia = async () => {
   if (!hasPermission) return;
 
   try {
-    console.log("About to open media picker...");
+    console.log("Launching media picker...");
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All, // Use predefined enum
-      allowsEditing: true,
+      mediaTypes: ['images', 'videos'], // Specifically target videos
+      allowsEditing: false, // Set to false to reduce potential issues
       quality: 1,
     });
-    console.log("Media picker result:", result);
 
-    if (!result.canceled) {
-      const file = result.assets[0];
-      console.log("Picked media:", file);
+    console.log("Media picker result:", JSON.stringify(result, null, 2));
 
-      const mediaType = getMediaType(file);
-      console.log("Media type:", mediaType);
+    if (result.canceled) {
+      console.warn("User canceled the media picker or it failed.");
+      return;
+    }
 
-      if (mediaType === "unknown") {
-        alert("Unsupported media type. Please select an image, video, or audio file.");
-        setPickedMedia(null);
-      } else {
-        setPickedMedia({ ...file, mediaType });
-      }
+    const file = result.assets[0];
+    console.log("Picked media file:", file);
+
+    const mediaType = getMediaType(file);
+    console.log("Detected media type:", mediaType);
+
+    if (mediaType === "unknown") {
+      alert("Unsupported media type. Please select a valid video file.");
+      setPickedMedia(null);
+    } else {
+      setPickedMedia({ ...file, mediaType });
     }
   } catch (error) {
-    console.error("Error opening media picker:", error);
+    console.error("Error with media picker:", error);
   }
 };
+
 
 const uploadMedia = async () => {
   if (!newMediaName || !pickedMedia) {
@@ -195,29 +208,36 @@ const uploadMedia = async () => {
 };
 
 
-const renderMediaItem = ({ item }) => (
-  <TouchableOpacity onPress={() => setSelectedMedia(item)}>
-    {item.media_type === "photo" && (
-      <Image source={{ uri: item.url }} style={styles.mediaImage} />
-    )}
-    {item.media_type === "video" && (
-      <Video
-        source={{ uri: item.url }}
-        style={styles.mediaVideo}
-        useNativeControls
-        resizeMode="cover"
-      />
-    )}
-    {item.media_type === "audio" && (
-      <View style={styles.audioContainer}>
-        <Text style={styles.audioText}>{item.name}</Text>
-        <TouchableOpacity onPress={() => playAudio(item.url)}>
-          <Text style={styles.playButton}>Play</Text>
-        </TouchableOpacity>
-      </View>
-    )}
-  </TouchableOpacity>
-);
+const renderMediaItem = ({ item }) => {
+  return (
+    <TouchableOpacity onPress={() => setSelectedMedia(item)}>
+      {item.media_type === "photo" && (
+        // Render image for photos
+        <Image source={{ uri: item.url }} style={styles.mediaImage} />
+      )}
+      {item.media_type === "video" && (
+        <View style={styles.videoThumbnailContainer}>
+          {/* Use Video Component to Render First Frame as Thumbnail */}
+          <Video
+            source={{ uri: item.url }}
+            style={styles.mediaImage}
+            resizeMode="cover"
+            shouldPlay={false} // Ensure video does not autoplay
+            isLooping={false}
+          />
+          {/* Play button overlay */}
+          <TouchableOpacity
+            style={styles.playButtonOverlay}
+            onPress={() => setSelectedMedia(item)}
+          >
+            <Text style={styles.playButtonText}>▶</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
+
 
 
   return (
@@ -256,8 +276,29 @@ const renderMediaItem = ({ item }) => (
               <Text style={styles.buttonText}>Pick Media</Text>
             </TouchableOpacity>
             {pickedMedia && (
-              <Image source={{ uri: pickedMedia.uri }} style={styles.previewImage} />
-            )}
+  <View style={styles.previewContainer}>
+    {pickedMedia.mediaType === "photo" && (
+      <Image source={{ uri: pickedMedia.uri }} style={styles.previewImage} />
+    )}
+    {pickedMedia.mediaType === "video" && (
+      <Video
+        source={{ uri: pickedMedia.uri }}
+        style={styles.previewImage}
+        useNativeControls
+        resizeMode="cover"
+      />
+    )}
+    {pickedMedia.mediaType === "audio" && (
+      <View style={styles.audioPreviewContainer}>
+        <Text style={styles.audioPreviewText}>{pickedMedia.fileName || "Audio File"}</Text>
+        <TouchableOpacity onPress={() => playAudio(pickedMedia.uri)}>
+          <Text style={styles.playAudioButton}>Play Audio</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+  </View>
+)}
+
             {uploading ? (
               <ActivityIndicator size="large" color="#19747E" />
             ) : (
@@ -279,19 +320,31 @@ const renderMediaItem = ({ item }) => (
           </View>
         </View>
       </Modal>
-{selectedMedia && (
+      {selectedMedia && (
   <Modal visible={true} transparent={true} onRequestClose={() => setSelectedMedia(null)}>
     <View style={styles.modalContainer}>
       <View style={styles.previewModalContent}>
         {/* Display Selected Media Name */}
         <Text style={styles.mediaName}>{selectedMedia.name}</Text>
 
-        {/* Display Selected Media Image */}
-        <Image source={{ uri: selectedMedia.url }} style={styles.fullscreenImage} />
+        {/* Conditionally Render Image or Video */}
+        {selectedMedia.media_type === "photo" && (
+          <Image source={{ uri: selectedMedia.url }} style={styles.fullscreenImage} />
+        )}
+        {selectedMedia.media_type === "video" && (
+          <Video
+            source={{ uri: selectedMedia.url }}
+            style={styles.fullscreenVideo}
+            useNativeControls
+            resizeMode="contain"
+            shouldPlay={true}
+            isLooping={false}
+          />
+        )}
 
         {/* Close Button */}
         <TouchableOpacity
-          style={styles.previewCloseButton} // Use the dedicated button style
+          style={styles.previewCloseButton}
           onPress={() => setSelectedMedia(null)}
         >
           <Text style={styles.previewCloseButtonText}>Close</Text>
@@ -300,6 +353,7 @@ const renderMediaItem = ({ item }) => (
     </View>
   </Modal>
 )}
+
 
 
     </View>
@@ -335,6 +389,31 @@ const styles = StyleSheet.create({
       width: "100%",
     },
     previewImage: { width: 150, height: 150, marginVertical: 10, borderRadius: 10 },
+    previewContainer: {
+      alignItems: "center",
+      marginVertical: 10,
+    },
+    previewVideo: {
+      width: 150,
+      height: 150,
+      borderRadius: 10,
+    },
+    audioPreviewContainer: {
+      alignItems: "center",
+      backgroundColor: "#f0f0f0",
+      padding: 10,
+      borderRadius: 10,
+    },
+    audioPreviewText: {
+      fontSize: 16,
+      color: "#333",
+      marginBottom: 5,
+    },
+    playAudioButton: {
+      color: "#19747E",
+      fontWeight: "bold",
+      marginTop: 5,
+    },
     modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 20, width: "100%" },
     modalButton: {
       backgroundColor: "#19747E",
@@ -396,8 +475,34 @@ const styles = StyleSheet.create({
 audioContainer: { width: 100, margin: 5, padding: 10, backgroundColor: "#ddd", borderRadius: 10 },
 audioText: { fontSize: 12, textAlign: "center" },
 playButton: { color: "#19747E", textAlign: "center", marginTop: 5 },
-    
-  });
+fullscreenVideo: {
+  width: "90%",
+  height: "60%",
+  borderRadius: 10,
+  backgroundColor: "#000", // Optional for better contrast
+  marginBottom: 15,
+},
+videoThumbnailContainer: {
+  position: "relative",
+},
+playButtonOverlay: {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: [{ translateX: -15 }, { translateY: -15 }],
+  width: 30,
+  height: 30,
+  backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent black
+  borderRadius: 15,
+  justifyContent: "center",
+  alignItems: "center",
+},
+playButtonText: {
+  color: "white",
+  fontSize: 18,
+  fontWeight: "bold",
+},
+});
   
   
   
