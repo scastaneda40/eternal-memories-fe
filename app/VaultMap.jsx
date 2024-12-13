@@ -5,8 +5,11 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 
 const VaultMap = () => {
   const route = useRoute();
+  console.log('duh vault route', route)
   const navigation = useNavigation();
   const { memories = [] } = route.params || {}; // Safely access memories
+
+  console.log('route params vault map', route.params)
 
   return (
     <View style={styles.container}>

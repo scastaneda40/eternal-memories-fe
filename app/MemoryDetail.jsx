@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,33 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Dimensions,
 } from "react-native";
+import Carousel from "react-native-reanimated-carousel";
+import { Video } from "expo-av";
+import { useRoute } from "@react-navigation/native";
 
-const MemoryDetail = ({ route, navigation }) => {
-  const { memory } = route.params;
 
-  // Format the date
+const { width } = Dimensions.get("window");
+
+const MemoryDetail = ({ navigation }) => {
+  const route = useRoute();
+  const [mediaRefs, setMediaRefs] = useState([]);
+
+  useEffect(() => {
+    console.log("Route params:", route.params);
+  }, [route]);
+
+  const memory = route?.params?.memory;
+
+  if (!memory) {
+    return (
+      <View style={styles.safeArea}>
+        <Text style={styles.errorText}>Memory details are unavailable.</Text>
+      </View>
+    );
+  }
+
   const formattedDate = memory.actual_date
     ? new Date(memory.actual_date).toLocaleDateString("en-US", {
         month: "short",
@@ -21,37 +42,73 @@ const MemoryDetail = ({ route, navigation }) => {
       })
     : "Invalid Date";
 
+  // Render each media item
+  const renderMediaItem = ({ item }) => {
+    if (item.endsWith(".mp4") || item.endsWith(".mov")) {
+      return (
+        <Video
+          source={{ uri: item }}
+          style={styles.media}
+          resizeMode="cover"
+          useNativeControls
+          shouldPlay={false} // Avoid auto-play when switching
+          ref={(ref) => {
+            setMediaRefs((prevRefs) => {
+              const newRefs = [...prevRefs];
+              newRefs.push(ref);
+              return newRefs;
+            });
+          }}
+        />
+      );
+    }
+    return <Image source={{ uri: item }} style={styles.media} />;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Memory Image */}
-        <Image source={{ uri: memory.file_url }} style={styles.image} />
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Carousel Section */}
+       
+        <View style={styles.carouselContainer}>
+          <Carousel
+            loop
+            width={width}
+            height={300}
+            data={memory.file_urls || []}
+            renderItem={renderMediaItem}
+            onSnapToItem={() => {
+              // Pause all videos when switching slides
+              mediaRefs.forEach((ref) => {
+                if (ref) ref.pauseAsync();
+              });
+            }}
+          />
+        </View>
 
-        {/* Memory Title */}
-        <Text style={styles.title}>{memory.title}</Text>
+        {/* Details Section */}
+        <View style={styles.detailsContainer}>
+          <Text style={styles.title}>{memory.title}</Text>
+          <Text style={styles.date}>{formattedDate}</Text>
+          <Text style={styles.description}>{memory.description}</Text>
+        </View>
 
-        {/* Memory Date */}
-        <Text style={styles.date}>{formattedDate}</Text>
-
-        {/* Memory Description */}
-        <Text style={styles.description}>{memory.description}</Text>
+        {/* Button Section */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => console.log("Share")}
+          >
+            <Text style={styles.buttonText}>Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={() => navigation.navigate("EditMemory", { memory })}
+          >
+            <Text style={styles.buttonText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-
-      {/* Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => console.log("Share")}
-        >
-          <Text style={styles.buttonText}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => navigation.navigate("EditMemory", { memory })}
-        >
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -61,15 +118,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FAFAFA",
   },
-  container: {
+  scrollContainer: {
     flexGrow: 1,
-    padding: 20,
     backgroundColor: "#FFFFFF",
   },
-  image: {
+  carouselContainer: {
+    alignItems: "center",
+    marginVertical: 30,
+    // paddingHorizontal: 50
+  },
+  media: {
     width: "100%",
-    height: 200,
+    height: "100%",
     borderRadius: 10,
+  },
+  detailsContainer: {
+    paddingHorizontal: 20,
     marginBottom: 20,
   },
   title: {
@@ -89,7 +153,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: "#444444",
-    marginBottom: 20,
+    textAlign: "center",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -122,4 +186,6 @@ const styles = StyleSheet.create({
 });
 
 export default MemoryDetail;
+
+
 

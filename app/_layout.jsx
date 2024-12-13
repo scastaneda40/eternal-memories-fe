@@ -47,7 +47,7 @@ export default function RootLayout() {
           <ProfileProvider>
             <Stack screenOptions={{ headerShown: true, headerBackTitleVisible: false }}>
               {/* Main Tab Navigator */}
-              <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: true, headerTitle: "" }} />
               {/* Additional Routes */}
               <Stack.Screen name="MemoryChat" />
               <Stack.Screen name="AddMedia" />
@@ -57,8 +57,6 @@ export default function RootLayout() {
               <Stack.Screen name="PreviewCapsule" />
               <Stack.Screen name="EditCapsule" />
               <Stack.Screen name="CapsuleTimeline" />
-              <Stack.Screen name="MemoryDetail" />
-              <Stack.Screen name="VaultMap" options={{ title: "Memory Map" }} />
               <Stack.Screen name="MemoryUpload" />
               <Stack.Screen name="MediaBankUpload" />
               <Stack.Screen name="MediaGallery" options={{ title: "Gallery" }} />

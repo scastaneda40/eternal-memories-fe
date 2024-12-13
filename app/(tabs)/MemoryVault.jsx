@@ -23,6 +23,8 @@ const MemoryVault = () => {
 
   const userId = user?.id;
 
+  
+
   useEffect(() => {
     if (!userId) return; // Wait until userId is available
 
@@ -76,6 +78,7 @@ const MemoryVault = () => {
           console.error("Error fetching memories:", error.message);
         } else {
           const formattedMemories = data.map((memory) => {
+            console.log('formatted mem', formattedMemories)
             const file_urls = memory.memory_media.map(
               (media) => media.media_bank.url
             );
@@ -105,30 +108,36 @@ const MemoryVault = () => {
     }
   };
 
-  const renderMemory = ({ item }) => (
-    <View style={styles.memoryContainer}>
-      <FlatList
-        data={item.file_urls || []}
-        horizontal
-        keyExtractor={(url, index) => `${item.id}-image-${index}`}
-        showsHorizontalScrollIndicator={true}
-        renderItem={({ item: imageUrl }) => (
-          <Image source={{ uri: imageUrl }} style={styles.memoryImage} />
-        )}
-      />
-      <TouchableOpacity
-        onPress={() => navigation.navigate("MemoryDetail", { memory: item })}
-      >
-        <Text style={styles.memoryTitle}>
-          {item.title || "Untitled Memory"}
+  const renderMemory = ({ item }) => {
+    console.log("Navigating with item:", item);
+    return (
+      <View style={styles.memoryContainer}>
+        <FlatList
+          data={item.file_urls || []}
+          horizontal
+          keyExtractor={(url, index) => `${item.id}-image-${index}`}
+          showsHorizontalScrollIndicator={true}
+          renderItem={({ item: imageUrl }) => (
+            <Image source={{ uri: imageUrl }} style={styles.memoryImage} />
+          )}
+        />
+        <TouchableOpacity
+          onPress={() => { console.log("Navigating with memory:", { name: "MemoryDetail", params: { memory: item } });
+          navigation.navigate("MemoryDetail", { memory: item });
+          ; }}
+        >
+          <Text style={styles.memoryTitle}>
+            {item.title || "Untitled Memory"}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.memoryDate}>{formatDate(item.actual_date)}</Text>
+        <Text numberOfLines={2} style={styles.memoryDescription}>
+          {item.description || "No description provided."}
         </Text>
-      </TouchableOpacity>
-      <Text style={styles.memoryDate}>{formatDate(item.actual_date)}</Text>
-      <Text numberOfLines={2} style={styles.memoryDescription}>
-        {item.description || "No description provided."}
-      </Text>
-    </View>
-  );
+      </View>
+    );
+  };
+  
 
   if (isLoading) {
     return (
