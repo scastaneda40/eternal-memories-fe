@@ -51,7 +51,7 @@ export default function RootLayout() {
               {/* Additional Routes */}
               <Stack.Screen name="MemoryChat" />
               <Stack.Screen name="AddMedia" />
-              <Stack.Screen name="LovedOneProfile" />
+              <Stack.Screen name="LovedOneProfile"/>
               <Stack.Screen name="CreateCapsule" />
               <Stack.Screen name="CapsuleReview" />
               <Stack.Screen name="PreviewCapsule" />

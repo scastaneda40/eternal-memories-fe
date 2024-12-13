@@ -7,6 +7,7 @@ import {
     ImageBackground,
     Image,
     Platform,
+    ScrollView
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -20,15 +21,12 @@ const Dashboard = () => {
     const navigation = useNavigation();
     const [highlightedMemory, setHighlightedMemory] = useState(null);
     const insets = useSafeAreaInsets();
+    const [isLoading, setIsLoading] = useState(true);
 
     const { profile } = useProfile();
     const { user } = useUser();
 
-    useEffect(() => {
-        if (!profile) {
-            navigation.navigate("LovedOneProfile");
-        }
-    }, [profile, navigation]);
+    
 
     useEffect(() => {
         const fetchHighlightedMemory = async () => {
@@ -53,7 +51,7 @@ const Dashboard = () => {
     }, []);
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ScrollView style={[styles.container, { paddingTop: insets.top }]}>
             {/* Hero Section */}
             <ImageBackground
                 source={{
@@ -122,7 +120,7 @@ const Dashboard = () => {
                     <Text style={styles.tileText}>Create Capsule</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </ScrollView>
     );
 };
 

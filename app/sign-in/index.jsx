@@ -80,37 +80,25 @@ export default function SignInScreen() {
 
   const proceedWithBackendRequest = async (clerkUserId) => {
     try {
-      const payload = {
-        clerk_user_id: clerkUserId,
-        email: emailAddress,
-      };
+        const response = await fetch("http://localhost:5000/users", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ clerk_user_id: clerkUserId }),
+        });
 
-      console.log("Payload being sent to backend:", payload);
+        const data = await response.json();
+        setUser({ id: data.id });
 
-      const response = await fetch("http://localhost:5000/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text(); // Fallback to text if JSON fails
-        console.error("Failed to fetch user:", errorData);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Parsed response from backend:", data);
-
-      setUser({ id: data.id });
-      console.log("User set in context:", data.id);
-      router.replace("/");
+        // Navigate directly to Dashboard
+        router.replace("/");
     } catch (err) {
-      console.error("Error communicating with backend:", err.message);
+        console.error("Error communicating with backend:", err.message);
     }
-  };
+};
+
+
 
   return (
     <SafeAreaView style={styles.container}>

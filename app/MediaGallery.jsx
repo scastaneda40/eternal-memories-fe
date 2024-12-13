@@ -16,7 +16,7 @@ import { supabase } from "../constants/supabaseClient";
 import { useUser } from "../constants/UserContext";
 
 const MediaBankGallery = () => {
-  const { userId } = useUser();
+  const { user } = useUser();
   const [mediaBank, setMediaBank] = useState([]);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -25,114 +25,200 @@ const MediaBankGallery = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const fetchMediaBank = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.from("media_bank").select("*").eq("user_id", userId);
-      if (error) {
-        console.error("Error fetching media:", error.message);
-      } else {
-        setMediaBank(data);
-      }
-    } catch (err) {
-      console.error("Unexpected error fetching media:", err);
-    } finally {
-      setLoading(false);
+  const userId = user?.id; // Ensure safe access
+
+  const requestMediaPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      alert("Sorry, we need media library permissions to make this work!");
+      return false;
     }
+    return true;
   };
 
-  useEffect(() => {
-    fetchMediaBank();
-  }, []);
+  const fetchMediaBank = async () => {
+    try {
+        setLoading(true);
+        console.log("Fetching media for user_id:", userId);
+        const { data, error } = await supabase
+            .from("media_bank")
+            .select("*")
+            .eq("user_id", userId);
 
-  const pickMedia = async () => {
+        if (error) {
+            console.error("Error fetching media:", error.message);
+        } else {
+            console.log("Fetched media:", data);
+            setMediaBank(data);
+        }
+    } catch (err) {
+        console.error("Unexpected error fetching media:", err);
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+useEffect(() => {
+  if (userId) {
+      console.log("Fetching media for user_id:", userId);
+      fetchMediaBank();
+  } else {
+      console.log("Waiting for userId...");
+  }
+}, [userId]);
+
+
+const getMediaType = (file) => {
+  if (file.mimeType) {
+    if (file.mimeType.startsWith("image/")) {
+      return "photo";
+    } else if (file.mimeType.startsWith("video/")) {
+      return "video";
+    } else if (file.mimeType.startsWith("audio/")) {
+      return "audio";
+    }
+  }
+
+  // Fallback to file extension
+  const extension = file.uri.split('.').pop().toLowerCase();
+  if (["jpg", "jpeg", "png", "gif"].includes(extension)) {
+    return "photo";
+  } else if (["mp4", "mov", "avi"].includes(extension)) {
+    return "video";
+  } else if (["mp3", "wav", "aac"].includes(extension)) {
+    return "audio";
+  }
+
+  return "unknown";
+};
+
+const pickMedia = async () => {
+  const hasPermission = await requestMediaPermissions();
+  if (!hasPermission) return;
+
+  try {
+    console.log("About to open media picker...");
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // Use predefined enum
       allowsEditing: true,
       quality: 1,
     });
+    console.log("Media picker result:", result);
 
     if (!result.canceled) {
       const file = result.assets[0];
-      setPickedMedia(file);
-    }
-  };
+      console.log("Picked media:", file);
 
-  const uploadMedia = async () => {
-    if (!newMediaName || !pickedMedia) {
-      alert("Please provide a name and select media.");
+      const mediaType = getMediaType(file);
+      console.log("Media type:", mediaType);
+
+      if (mediaType === "unknown") {
+        alert("Unsupported media type. Please select an image, video, or audio file.");
+        setPickedMedia(null);
+      } else {
+        setPickedMedia({ ...file, mediaType });
+      }
+    }
+  } catch (error) {
+    console.error("Error opening media picker:", error);
+  }
+};
+
+const uploadMedia = async () => {
+  if (!newMediaName || !pickedMedia) {
+    alert("Please provide a name and select media.");
+    return;
+  }
+
+  setUploading(true);
+
+  try {
+    const fileName = `${Date.now()}-${pickedMedia.fileName || 'media'}.${pickedMedia.uri.split('.').pop()}`;
+    const file = {
+      uri: pickedMedia.uri,
+      name: fileName,
+      type: pickedMedia.mimeType || "application/octet-stream", // Use detected MIME type
+    };
+
+    const { error: uploadError } = await supabase.storage
+      .from("media_bank")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error("Error uploading media:", uploadError.message);
+      setUploading(false);
       return;
     }
 
-    setUploading(true);
+    const { data: publicURLData, error: publicURLError } = supabase.storage
+      .from("media_bank")
+      .getPublicUrl(fileName);
 
-    try {
-      const fileName = `media-${Date.now()}.jpg`;
-      const file = {
-        uri: pickedMedia.uri,
-        name: fileName,
-        type: "image/jpeg",
-      };
-
-      const { error: uploadError } = await supabase.storage
-        .from("media_bank")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error("Error uploading media:", uploadError.message);
-        setUploading(false);
-        return;
-      }
-
-      const { data: publicURLData, error: publicURLError } = supabase.storage
-        .from("media_bank")
-        .getPublicUrl(fileName);
-
-      if (publicURLError) {
-        console.error("Error generating public URL:", publicURLError.message);
-        setUploading(false);
-        return;
-      }
-
-      const publicURL = publicURLData.publicUrl;
-      const typeId = "fd0836ed-95ee-4182-a14c-768c5b872660";
-
-      const { error: insertError } = await supabase.from("media_bank").insert([
-        {
-          url: publicURL,
-          type_id: typeId,
-          name: newMediaName,
-          user_id: userId,
-        },
-      ]);
-
-      if (insertError) {
-        console.error("Error inserting into media_bank table:", insertError.message);
-        setUploading(false);
-        return;
-      }
-
-      Toast.show({
-        type: "success",
-        text1: "Upload Successful!",
-      });
-
-      fetchMediaBank();
-      setNewMediaName("");
-      setPickedMedia(null);
-      setModalVisible(false);
-    } catch (error) {
-      console.error("Unexpected upload error:", error);
-    } finally {
+    if (publicURLError) {
+      console.error("Error generating public URL:", publicURLError.message);
       setUploading(false);
+      return;
     }
-  };
 
-  const renderMediaItem = ({ item }) => (
-    <TouchableOpacity onPress={() => setSelectedMedia(item)}>
+    const publicURL = publicURLData.publicUrl;
+
+    const { error: insertError } = await supabase.from("media_bank").insert([
+      {
+        url: publicURL,
+        media_type: pickedMedia.mediaType, // Use dynamically detected media type
+        name: newMediaName,
+        user_id: userId,
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Error inserting into media_bank table:", insertError.message);
+      setUploading(false);
+      return;
+    }
+
+    Toast.show({
+      type: "success",
+      text1: "Upload Successful!",
+    });
+
+    fetchMediaBank();
+    setNewMediaName("");
+    setPickedMedia(null);
+    setModalVisible(false);
+  } catch (error) {
+    console.error("Unexpected upload error:", error);
+  } finally {
+    setUploading(false);
+  }
+};
+
+
+const renderMediaItem = ({ item }) => (
+  <TouchableOpacity onPress={() => setSelectedMedia(item)}>
+    {item.media_type === "photo" && (
       <Image source={{ uri: item.url }} style={styles.mediaImage} />
-    </TouchableOpacity>
-  );
+    )}
+    {item.media_type === "video" && (
+      <Video
+        source={{ uri: item.url }}
+        style={styles.mediaVideo}
+        useNativeControls
+        resizeMode="cover"
+      />
+    )}
+    {item.media_type === "audio" && (
+      <View style={styles.audioContainer}>
+        <Text style={styles.audioText}>{item.name}</Text>
+        <TouchableOpacity onPress={() => playAudio(item.url)}>
+          <Text style={styles.playButton}>Play</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+  </TouchableOpacity>
+);
+
 
   return (
     <View style={styles.container}>
@@ -150,6 +236,7 @@ const MediaBankGallery = () => {
           renderItem={renderMediaItem}
           numColumns={3}
           contentContainerStyle={styles.gallery}
+          columnWrapperStyle={styles.columnWrapper}
         />
       ) : (
         <Text style={styles.noMediaText}>No media found</Text>
@@ -221,9 +308,10 @@ const MediaBankGallery = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    gallery: { justifyContent: "center", alignItems: "center"},
+    gallery: { paddingHorizontal: 30 },
     mediaImage: { width: 100, height: 100, margin: 5, borderRadius: 10 },
     noMediaText: { fontSize: 16, color: "#999", textAlign: "center", marginTop: 20 },
+    columnWrapper: { justifyContent: "flex-start" },
     modalContainer: {
       flex: 1,
       justifyContent: "center",
@@ -295,7 +383,20 @@ const styles = StyleSheet.create({
       },  
       previewCloseButtonText: {
           color: "#fff"
-      }    
+      },
+      pickButton: {
+        backgroundColor: "#19747E",
+        width: "100%",
+        padding: 12,
+        borderRadius: 8,
+        width: "50%",
+        alignItems: "center"
+      },
+      mediaVideo: { width: 100, height: 100, margin: 5, borderRadius: 10 },
+audioContainer: { width: 100, margin: 5, padding: 10, backgroundColor: "#ddd", borderRadius: 10 },
+audioText: { fontSize: 12, textAlign: "center" },
+playButton: { color: "#19747E", textAlign: "center", marginTop: 5 },
+    
   });
   
   
