@@ -11,6 +11,8 @@ import {
 import { supabase } from "../../constants/supabaseClient";
 import { useUser } from "../../constants/UserContext";
 import { useNavigation } from "@react-navigation/native";
+import { Video } from "expo-av";
+
 
 const MemoryVault = () => {
   const [memories, setMemories] = useState([]);
@@ -109,22 +111,65 @@ const MemoryVault = () => {
   };
 
   const renderMemory = ({ item }) => {
-    console.log("Navigating with item:", item);
+    const renderMediaItem = (mediaUrl) => {
+      const isVideo = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".mov");
+  
+      return isVideo ? (
+        <View style={{ position: "relative", width: 300, height: 200, marginRight: 10 }}>
+          <Video
+            source={{ uri: mediaUrl }}
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: 10,
+            }}
+            resizeMode="cover"
+          />
+          {/* Play button overlay */}
+          <View
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: [{ translateX: -15 }, { translateY: -15 }],
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              borderRadius: 15,
+              width: 30,
+              height: 30,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold" }}>▶</Text>
+          </View>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: mediaUrl }}
+          style={{
+            width: 300,
+            height: 200,
+            borderRadius: 10,
+            marginRight: 10,
+          }}
+        />
+      );
+    };
+  
     return (
       <View style={styles.memoryContainer}>
         <FlatList
           data={item.file_urls || []}
           horizontal
-          keyExtractor={(url, index) => `${item.id}-image-${index}`}
+          keyExtractor={(url, index) => `${item.id}-media-${index}`}
           showsHorizontalScrollIndicator={true}
-          renderItem={({ item: imageUrl }) => (
-            <Image source={{ uri: imageUrl }} style={styles.memoryImage} />
-          )}
+          renderItem={({ item: mediaUrl }) => renderMediaItem(mediaUrl)}
         />
         <TouchableOpacity
-          onPress={() => { console.log("Navigating with memory:", { name: "MemoryDetail", params: { memory: item } });
-          navigation.navigate("MemoryDetail", { memory: item });
-          ; }}
+          onPress={() => {
+            console.log("Navigating with memory:", { name: "MemoryDetail", params: { memory: item } });
+            navigation.navigate("MemoryDetail", { memory: item });
+          }}
         >
           <Text style={styles.memoryTitle}>
             {item.title || "Untitled Memory"}
@@ -137,6 +182,7 @@ const MemoryVault = () => {
       </View>
     );
   };
+  
   
 
   if (isLoading) {

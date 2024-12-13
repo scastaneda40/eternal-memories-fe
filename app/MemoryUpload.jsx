@@ -21,6 +21,7 @@ import { useProfile } from "../constants/ProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { supabase } from "../constants/supabaseClient";
+import { Video } from "expo-av";
 
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyBILRnNABNjR-C8w8GZYinp_uZBouZJHrc";
@@ -55,6 +56,9 @@ const MemoryUpload = () => {
   const { user } = useUser();
   const { profile: globalProfile } = useProfile();
   const navigation = useNavigation();
+  const [mediaBank, setMediaBank] = useState([]);
+const [isMediaBankModalVisible, setIsMediaBankModalVisible] = useState(false);
+const [isLoading, setLoading] = useState(false);
 
   const userId = user?.id;
 
@@ -89,6 +93,42 @@ const MemoryUpload = () => {
     fetchProfiles();
   }, [userId]);
   
+  const fetchMediaBank = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching media for user_id:", userId);
+      const { data, error } = await supabase
+        .from("media_bank")
+        .select("*")
+        .eq("user_id", userId);
+  
+      if (error) {
+        console.error("Error fetching media:", error.message);
+      } else {
+        console.log("Fetched media:", data);
+        setMediaBank(data);
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching media:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSelectFromMediaBank = (selectedItem) => {
+    setMedia((prev) => [...prev, { uri: selectedItem.url }]);
+    Toast.show({
+      type: "success",
+      text1: "Media Added",
+      text2: "Selected media added to the memory.",
+    });
+  };
+  
+  useEffect(() => {
+    if (isMediaBankModalVisible && userId) {
+      fetchMediaBank();
+    }
+  }, [isMediaBankModalVisible, userId]);
 
   const handleProfileSelection = (profile) => {
     console.log("Selected Profile:", profile);
@@ -316,7 +356,7 @@ const MemoryUpload = () => {
           onChangeText={setDescription}
           multiline
         />
-        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={() => setDatePickerVisibility(true)}>
+        <TouchableOpacity style={[styles.button, styles.primaryButton, styles.dateButton]} onPress={() => setDatePickerVisibility(true)}>
           <Text style={styles.buttonText}>Select Date</Text>
         </TouchableOpacity>
         <Text style={styles.dateText}>{date.toDateString()}</Text>
@@ -329,29 +369,81 @@ const MemoryUpload = () => {
           }}
           onCancel={() => setDatePickerVisibility(false)}
         />
+         <TouchableOpacity style={[styles.button, styles.neutralButton]} onPress={() => setIsMediaBankModalVisible(true)}>
+          <Text style={styles.buttonText}>Select Media from Media Bank</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.neutralButton]} onPress={pickImage}>
           <Text style={styles.buttonText}>Import Media</Text>
         </TouchableOpacity>
         {media.length > 0 && (
-          <View style={styles.carouselContainer}>
-            <Carousel
-              loop
-              width={300}
-              height={200}
-              data={media}
-              renderItem={({ item }) => (
-                <View style={styles.carouselItem}>
-                  <Image source={{ uri: item.uri }} style={styles.mediaImage} />
+  <View style={styles.carouselContainer}>
+    <Carousel
+      loop
+      width={300}
+      height={200}
+      data={media}
+      renderItem={({ item }) => {
+        const isVideo =
+          item.uri.endsWith(".mp4") || item.uri.endsWith(".mov"); // Check if it's a video
+
+        return (
+          <View style={styles.carouselItem}>
+            {isVideo ? (
+              <View style={{ position: "relative", width: "100%", height: "100%" }}>
+                <Video
+                  source={{ uri: item.uri }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: 8,
+                  }}
+                  resizeMode="cover"
+                  useNativeControls
+                />
+                {/* Play Button Overlay */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: [{ translateX: -15 }, { translateY: -15 }],
+                    backgroundColor: "rgba(0, 0, 0, 0.6)",
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 20, fontWeight: "bold" }}>
+                    ▶
+                  </Text>
                 </View>
-              )}
-            />
+              </View>
+            ) : (
+              <Image
+                source={{ uri: item.uri }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  resizeMode: "cover",
+                  borderRadius: 8,
+                }}
+              />
+            )}
           </View>
-        )}
+        );
+      }}
+    />
+  </View>
+)}
+
+
         <Text style={styles.addressText}>Selected Address: {manualAddress}</Text>
-        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={() => setIsMapVisible(true)}>
+        <TouchableOpacity style={[styles.button, styles.primaryButton, styles.addressButton]} onPress={() => setIsMapVisible(true)}>
           <Text style={styles.buttonText}>Select Address</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleUpload}>
+        <TouchableOpacity style={[styles.button, styles.primaryButton, styles.uploadButton]} onPress={handleUpload}>
           <Text style={styles.buttonText}>Upload Memory</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -399,6 +491,174 @@ const MemoryUpload = () => {
 </View>
         </SafeAreaView>
       </Modal>
+
+      <Modal
+  visible={isMediaBankModalVisible}
+  animationType="slide"
+  onRequestClose={() => setIsMediaBankModalVisible(false)}
+>
+  <SafeAreaView
+    style={{
+      flex: 1,
+      backgroundColor: "#fff",
+      padding: 10,
+    }}
+  >
+    <Text
+      style={{
+        fontSize: 20,
+        fontWeight: "bold",
+        marginBottom: 10,
+        textAlign: "center",
+      }}
+    >
+      Select Media from Media Bank
+    </Text>
+
+    {isLoading ? (
+      <Text style={{ textAlign: "center", marginTop: 20 }}>Loading...</Text>
+    ) : (
+      <FlatList
+        data={mediaBank}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => {
+          const isVideo =
+            item.url.endsWith(".mp4") || item.url.endsWith(".mov"); // Check if it's a video
+          const isSelected = media.some(
+            (mediaItem) => mediaItem.uri === item.url
+          ); // Check if selected
+
+          return (
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                margin: 5,
+                aspectRatio: 1, // Ensures square thumbnails
+                maxWidth: "30%", // Ensures consistent column size
+                borderRadius: 8,
+                overflow: "hidden",
+                position: "relative",
+                borderWidth: isSelected ? 2 : 0,
+                borderColor: isSelected ? "#19747E" : "transparent", // Highlight if selected
+              }}
+              onPress={() => {
+                if (isSelected) {
+                  // Deselect if already selected
+                  setMedia((prev) =>
+                    prev.filter((mediaItem) => mediaItem.uri !== item.url)
+                  );
+                } else {
+                  // Add to selected items
+                  setMedia((prev) => [...prev, { uri: item.url }]);
+                }
+              }}
+            >
+              {isVideo ? (
+                <>
+                  <Video
+                    source={{ uri: item.url }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      resizeMode: "cover",
+                    }}
+                    resizeMode="cover"
+                    shouldPlay={false} // Static preview
+                    useNativeControls={false}
+                  />
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: "40%",
+                      left: "40%",
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      borderRadius: 20,
+                      padding: 5,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontSize: 16,
+                        textAlign: "center",
+                      }}
+                    >
+                      ▶
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Image
+                  source={{ uri: item.url }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    resizeMode: "cover",
+                  }}
+                />
+              )}
+              {isSelected && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 5,
+                    right: 5,
+                    backgroundColor: "#19747E",
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#fff",
+                      fontSize: 16,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ✓
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
+        numColumns={3} // Display as a grid with 3 columns
+        contentContainerStyle={{
+          paddingBottom: 20,
+        }}
+      />
+    )}
+
+    <TouchableOpacity
+      style={{
+        backgroundColor: "#19747E",
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 10,
+      }}
+      onPress={() => setIsMediaBankModalVisible(false)}
+    >
+      <Text
+        style={{
+          color: "#fff",
+          fontSize: 16,
+          fontWeight: "bold",
+        }}
+      >
+        Close
+      </Text>
+    </TouchableOpacity>
+  </SafeAreaView>
+</Modal>
+
+
+     
+
       <Toast />
     </SafeAreaView>
   );
@@ -441,7 +701,13 @@ const styles = StyleSheet.create({
     dropdownItemText: {
       fontSize: 16,
       color: "#333",
-    },  
+    }, 
+    dateText: {
+       fontSize: 16,
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+    }, 
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -564,6 +830,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
+  dateButton: {
+    marginBottom: 15
+  },
+  addressButton: {
+    marginBottom: 15
+  },
   carouselContainer: {
     justifyContent: 'center', // Centers content vertically (useful if container is tall)
     alignItems: 'center', // Centers content horizontally
@@ -582,6 +854,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },mediaBankList: {
+    paddingBottom: 20,
+  },
+  mediaBankItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  mediaBankImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  mediaBankText: {
+    fontSize: 16,
+    color: "#333",
   },
 
 });

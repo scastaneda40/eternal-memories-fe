@@ -4,6 +4,7 @@ import { supabase } from "../../constants/supabaseClient";
 import { useUser } from "../../constants/UserContext";
 import { convertUTCToLocal, convertUTCToSpecifiedZone } from "../../utils/dateUtils";
 import { useNavigation } from "@react-navigation/native";
+import { getPathWithConventionsCollapsed } from "expo-router/build/fork/getPathFromState-forks";
 
 const CapsuleTimeline = () => {
   const navigation = useNavigation();
@@ -32,7 +33,8 @@ const CapsuleTimeline = () => {
         ascending: view === "upcoming",
       });
 
-      if (error) {
+      if (data, error) {
+        console.log('capsule data', data)
         console.error("Error fetching capsules:", error.message);
         return;
       }

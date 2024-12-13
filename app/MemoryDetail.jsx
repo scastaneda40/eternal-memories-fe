@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,18 +13,17 @@ import Carousel from "react-native-reanimated-carousel";
 import { Video } from "expo-av";
 import { useRoute } from "@react-navigation/native";
 
-
 const { width } = Dimensions.get("window");
 
 const MemoryDetail = ({ navigation }) => {
   const route = useRoute();
-  const [mediaRefs, setMediaRefs] = useState([]);
+  const mediaRefs = useRef([]); // Use ref to manage media refs
+
+  const memory = route?.params?.memory;
 
   useEffect(() => {
     console.log("Route params:", route.params);
   }, [route]);
-
-  const memory = route?.params?.memory;
 
   if (!memory) {
     return (
@@ -42,24 +41,41 @@ const MemoryDetail = ({ navigation }) => {
       })
     : "Invalid Date";
 
-  // Render each media item
   const renderMediaItem = ({ item }) => {
     if (item.endsWith(".mp4") || item.endsWith(".mov")) {
       return (
-        <Video
-          source={{ uri: item }}
-          style={styles.media}
-          resizeMode="cover"
-          useNativeControls
-          shouldPlay={false} // Avoid auto-play when switching
-          ref={(ref) => {
-            setMediaRefs((prevRefs) => {
-              const newRefs = [...prevRefs];
-              newRefs.push(ref);
-              return newRefs;
-            });
-          }}
-        />
+        <View style={{ position: "relative", width: "100%", height: "100%" }}>
+          <Video
+            source={{ uri: item }}
+            style={styles.media}
+            resizeMode="cover"
+            useNativeControls
+            shouldPlay={false}
+            ref={(ref) => {
+              if (ref && !mediaRefs.current.includes(ref)) {
+                mediaRefs.current.push(ref); // Add ref without triggering re-renders
+              }
+            }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: [{ translateX: -15 }, { translateY: -15 }],
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              borderRadius: 15,
+              width: 30,
+              height: 30,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold" }}>
+              ▶
+            </Text>
+          </View>
+        </View>
       );
     }
     return <Image source={{ uri: item }} style={styles.media} />;
@@ -68,8 +84,6 @@ const MemoryDetail = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Carousel Section */}
-       
         <View style={styles.carouselContainer}>
           <Carousel
             loop
@@ -78,22 +92,19 @@ const MemoryDetail = ({ navigation }) => {
             data={memory.file_urls || []}
             renderItem={renderMediaItem}
             onSnapToItem={() => {
-              // Pause all videos when switching slides
-              mediaRefs.forEach((ref) => {
-                if (ref) ref.pauseAsync();
+              mediaRefs.current.forEach((ref) => {
+                if (ref) ref.pauseAsync(); // Pause all videos on slide change
               });
             }}
           />
         </View>
 
-        {/* Details Section */}
         <View style={styles.detailsContainer}>
           <Text style={styles.title}>{memory.title}</Text>
           <Text style={styles.date}>{formattedDate}</Text>
           <Text style={styles.description}>{memory.description}</Text>
         </View>
 
-        {/* Button Section */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
@@ -125,7 +136,6 @@ const styles = StyleSheet.create({
   carouselContainer: {
     alignItems: "center",
     marginVertical: 30,
-    // paddingHorizontal: 50
   },
   media: {
     width: "100%",
@@ -186,6 +196,7 @@ const styles = StyleSheet.create({
 });
 
 export default MemoryDetail;
+
 
 
 
