@@ -47,7 +47,7 @@ export default function RootLayout() {
           <ProfileProvider>
             <Stack screenOptions={{ headerShown: true, headerBackTitleVisible: false }}>
               {/* Main Tab Navigator */}
-              <Stack.Screen name="(tabs)" options={{ headerShown: true, headerTitle: "" }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: "" }} />
               {/* Additional Routes */}
               <Stack.Screen name="MemoryChat" />
               <Stack.Screen name="AddMedia" />

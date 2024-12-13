@@ -22,7 +22,7 @@ export default function TabsLayout() {
           tabBarInactiveTintColor: "gray",
         })}
       >
-        <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
+        <Tabs.Screen name="index" options={{ headerShown: false, title: "Dashboard" }} />
         <Tabs.Screen name="MemoryVault" options={{ title: "Memory Vault" }} />
         <Tabs.Screen name="CapsuleTimeline" options={{ title: "Capsules" }} />
         <Tabs.Screen name="MemoryChat" options={{ title: "Memory Chat" }} />

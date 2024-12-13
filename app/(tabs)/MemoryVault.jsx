@@ -1,340 +1,217 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  FlatList,
-  Image,
-  StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
+  StyleSheet,
+  ImageBackground,
+  Image,
+  Platform,
+  ScrollView,
 } from "react-native";
-import { supabase } from "../../constants/supabaseClient";
-import { useUser } from "../../constants/UserContext";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { Video } from "expo-av";
+import { supabase } from "../../constants/supabaseClient";
+import Calendar from "../../components/Calendar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useProfile } from "../../constants/ProfileContext";
+import { useUser } from "../../constants/UserContext";
 
-
-const MemoryVault = () => {
-  const [memories, setMemories] = useState([]);
-  const [profiles, setProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useUser();
+const Dashboard = () => {
   const navigation = useNavigation();
+  const [backgroundImage, setBackgroundImage] = useState(null);
+  const insets = useSafeAreaInsets();
 
-  const userId = user?.id;
-
-  
-
-  useEffect(() => {
-    if (!userId) return; // Wait until userId is available
-
-    const fetchProfiles = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("profile")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (error) {
-          console.error("Error fetching profiles:", error.message);
-        } else {
-          setProfiles(data);
-          if (data.length > 0) {
-            setSelectedProfile(data[0].id);
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error fetching profiles:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfiles();
-  }, [userId]);
+  const { profile } = useProfile();
+  const { user } = useUser();
 
   useEffect(() => {
-    if (!selectedProfile || !userId) return; // Wait until both userId and selectedProfile are available
-
-    const fetchMemories = async () => {
-      setIsLoading(true);
+    const fetchBackgroundImage = async () => {
       try {
         const { data, error } = await supabase
           .from("memories")
           .select(`
             *,
             memory_media (
-              media_bank (
-                url
-              )
+              media_bank (url, type)
             )
           `)
-          .eq("user_id", userId)
-          .eq("profile_id", selectedProfile)
           .order("created_at", { ascending: false });
 
         if (error) {
           console.error("Error fetching memories:", error.message);
         } else {
-          const formattedMemories = data.map((memory) => {
-            console.log('formatted mem', formattedMemories)
-            const file_urls = memory.memory_media.map(
-              (media) => media.media_bank.url
-            );
-            return { ...memory, file_urls };
-          });
-          setMemories(formattedMemories);
+          // Filter only image media
+          const imageMedia = data
+            .flatMap((memory) =>
+              memory.memory_media.map((media) => media.media_bank)
+            )
+            .filter((media) => media.type && media.type.startsWith("image/"));
+
+          // Pick a random image
+          if (imageMedia.length > 0) {
+            const randomImage =
+              imageMedia[Math.floor(Math.random() * imageMedia.length)];
+            setBackgroundImage(randomImage.url);
+          }
         }
-      } catch (error) {
-        console.error("Unexpected error fetching memories:", error);
-      } finally {
-        setIsLoading(false);
+      } catch (err) {
+        console.error("Unexpected error fetching memory:", err);
       }
     };
 
-    fetchMemories();
-  }, [selectedProfile, userId]);
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Date not available";
-    try {
-      const options = { year: "numeric", month: "short", day: "numeric" };
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, options);
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid Date";
-    }
-  };
-
-  const renderMemory = ({ item }) => {
-    const renderMediaItem = (mediaUrl) => {
-      const isVideo = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".mov");
-  
-      return isVideo ? (
-        <View style={{ position: "relative", width: 300, height: 200, marginRight: 10 }}>
-          <Video
-            source={{ uri: mediaUrl }}
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: 10,
-            }}
-            resizeMode="cover"
-          />
-          {/* Play button overlay */}
-          <View
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: [{ translateX: -15 }, { translateY: -15 }],
-              backgroundColor: "rgba(0, 0, 0, 0.6)",
-              borderRadius: 15,
-              width: 30,
-              height: 30,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold" }}>▶</Text>
-          </View>
-        </View>
-      ) : (
-        <Image
-          source={{ uri: mediaUrl }}
-          style={{
-            width: 300,
-            height: 200,
-            borderRadius: 10,
-            marginRight: 10,
-          }}
-        />
-      );
-    };
-  
-    return (
-      <View style={styles.memoryContainer}>
-        <FlatList
-          data={item.file_urls || []}
-          horizontal
-          keyExtractor={(url, index) => `${item.id}-media-${index}`}
-          showsHorizontalScrollIndicator={true}
-          renderItem={({ item: mediaUrl }) => renderMediaItem(mediaUrl)}
-        />
-        <TouchableOpacity
-          onPress={() => {
-            console.log("Navigating with memory:", { name: "MemoryDetail", params: { memory: item } });
-            navigation.navigate("MemoryDetail", { memory: item });
-          }}
-        >
-          <Text style={styles.memoryTitle}>
-            {item.title || "Untitled Memory"}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.memoryDate}>{formatDate(item.actual_date)}</Text>
-        <Text numberOfLines={2} style={styles.memoryDescription}>
-          {item.description || "No description provided."}
-        </Text>
-      </View>
-    );
-  };
-  
-  
-
-  if (isLoading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#19747E" />
-        <Text style={styles.loaderText}>Loading...</Text>
-      </View>
-    );
-  }
+    fetchBackgroundImage();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.mapButton}
-        onPress={() =>
-          navigation.navigate("VaultMap", { memories: memories || [] })
-        }
+    <View style={{ flex: 1 }}>
+      {/* Hero Section */}
+      <ImageBackground
+        source={{
+          uri: backgroundImage || "https://via.placeholder.com/500",
+        }}
+        style={styles.heroSection}
+        resizeMode="cover"
       >
-        <Text style={styles.mapButtonText}>View Map</Text>
-      </TouchableOpacity>
-      <View style={styles.dropdownContainer}>
+        <View style={styles.overlay} />
+
         <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => setDropdownVisible(!dropdownVisible)}
+          style={styles.profileIcon}
+          onPress={() => navigation.navigate("LovedOneProfile")}
         >
-          <Text style={styles.dropdownButtonText}>
-            {profiles.find((p) => p.id === selectedProfile)?.name ||
-              "Select Profile"}
-          </Text>
+          <Image
+            source={{
+              uri: "https://via.placeholder.com/100",
+            }}
+            style={styles.avatar}
+          />
         </TouchableOpacity>
-        {dropdownVisible && (
-          <View style={styles.dropdownMenu}>
-            {profiles.map((profile) => (
-              <TouchableOpacity
-                key={profile.id}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setSelectedProfile(profile.id);
-                  setDropdownVisible(false);
-                }}
-              >
-                <Text>{profile.name || "Unnamed Profile"}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-      <FlatList
-        data={memories}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderMemory}
-        contentContainerStyle={styles.listContent}
-      />
+
+        <TouchableOpacity
+          style={styles.heroButton}
+          onPress={() => navigation.navigate("MemoryVault")}
+        >
+          <Text style={styles.heroButtonText}>View Memory Vault</Text>
+        </TouchableOpacity>
+      </ImageBackground>
+
+      {/* Main Content */}
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Calendar Section */}
+        <View style={styles.calendar}>
+          <Calendar />
+        </View>
+
+        {/* Action Tiles */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={styles.actionTile}
+            onPress={() => navigation.navigate("MemoryUpload")}
+          >
+            <Ionicons name="cloud-upload-outline" size={28} color="#19747E" />
+            <Text style={styles.tileText}>Upload Memory</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionTile}
+            onPress={() => navigation.navigate("LovedOneProfile")}
+          >
+            <Ionicons name="person-add-outline" size={28} color="#FFC55B" />
+            <Text style={styles.tileText}>Create Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionTile}
+            onPress={() => navigation.navigate("MediaGallery")}
+          >
+            <Ionicons name="images-outline" size={28} color="#428EFF" />
+            <Text style={styles.tileText}>View Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionTile}
+            onPress={() => navigation.navigate("CreateCapsule")}
+          >
+            <Ionicons name="cube-outline" size={28} color="#F1465A" />
+            <Text style={styles.tileText}>Create Capsule</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  loaderContainer: {
-    flex: 1,
+  heroSection: {
+    height: 300, // Set height for hero image
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
   },
-  loaderText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#555",
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
-  mapButton: {
-    backgroundColor: "#19747E",
-    paddingVertical: 15,
+  profileIcon: {
+    position: "absolute",
+    top: Platform.OS === "android" ? 50 : 60,
+    left: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: "hidden",
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
+  },
+  heroButton: {
+    flexDirection: "row",
     alignItems: "center",
-    marginVertical: 10,
-    marginHorizontal: 20,
-    borderRadius: 10,
-  },
-  mapButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  dropdownContainer: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  dropdownButton: {
     backgroundColor: "#19747E",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  dropdownButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  dropdownMenu: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    marginTop: 5,
-  },
-  dropdownItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-  },
-  listContent: {
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    borderRadius: 25,
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
   },
-  memoryContainer: {
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
+  heroButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  content: {
+    padding: 20,
+    backgroundColor: "#f4f4f6",
+  },
+  calendar: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-evenly",
+    marginVertical: 20,
+  },
+  actionTile: {
+    width: "40%",
+    height: 140,
     borderRadius: 10,
+    backgroundColor: "#fff",
+    marginBottom: 20,
     padding: 10,
-    backgroundColor: "#f9f9f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  memoryImage: {
-    width: 300,
-    height: 200,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  memoryTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 5,
-  },
-  memoryDate: {
+  tileText: {
     fontSize: 14,
-    color: "#555",
-    textAlign: "center",
-    marginBottom: 5,
-  },
-  memoryDescription: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 5,
+    fontWeight: "500",
+    color: "#333",
+    marginTop: 10,
   },
 });
 
-export default MemoryVault;
+export default Dashboard;
+
 
 
 
