@@ -80,7 +80,7 @@ export default function SignInScreen() {
 
   const proceedWithBackendRequest = async (clerkUserId) => {
     try {
-        const response = await fetch("http://localhost:5000/users", {
+        const response = await fetch("http://192.168.1.116:5000/users", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

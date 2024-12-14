@@ -157,42 +157,112 @@ const SettingsPage = () => {
       </TouchableOpacity>
 
       <Modal visible={modalVisible} transparent={true} animationType="slide">
-  <View 
-    style={{ 
-      flex: 1, 
-      justifyContent: "center", 
-      alignItems: "center", 
-      backgroundColor: "rgba(0,0,0,0.5)" 
+  <View
+    style={{
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
     }}
   >
-    <View 
-      style={{ 
-        width: 300, 
-        padding: 20, 
-        backgroundColor: "#fff", 
-        borderRadius: 10, 
-        alignItems: "center" 
+    <View
+      style={{
+        width: 320,
+        padding: 20,
+        backgroundColor: "#fff",
+        borderRadius: 15,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
       }}
     >
-      <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 20 }}>
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "600",
+          marginBottom: 20,
+          color: "#333",
+        }}
+      >
         Update Profile Picture
       </Text>
-      
+
       {selectedImage ? (
-        <Image 
-          source={{ uri: selectedImage }} 
-          style={{ width: 150, height: 150, borderRadius: 75, marginBottom: 20 }} 
+        <Image
+          source={{ uri: selectedImage }}
+          style={{
+            width: 150,
+            height: 150,
+            borderRadius: 75,
+            marginBottom: 20,
+            borderWidth: 2,
+            borderColor: "#19747E",
+          }}
         />
       ) : null}
 
-      <Button title="Choose Image" onPress={openImagePicker} />
-      <View style={{ marginVertical: 10 }}>
-        <Button title="Upload" onPress={uploadImage} disabled={!selectedImage || isUploading} />
-      </View>
-      <Button title="Cancel" color="red" onPress={() => setModalVisible(false)} />
+      <TouchableOpacity
+        style={{
+          width: "90%",
+          paddingVertical: 12,
+          backgroundColor: "#19747E", // Teal
+          borderRadius: 8,
+          alignItems: "center",
+          marginBottom: 15,
+        }}
+        onPress={openImagePicker}
+      >
+        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+          Choose Image
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={{
+          width: "90%",
+          paddingVertical: 12,
+          backgroundColor: isUploading || !selectedImage ? "#d3d3d3" : "#F8A833", // Muted gold
+          borderRadius: 8,
+          alignItems: "center",
+          marginBottom: 15,
+        }}
+        onPress={uploadImage}
+        disabled={isUploading || !selectedImage}
+      >
+        <Text
+          style={{
+            color: isUploading || !selectedImage ? "#888" : "#fff",
+            fontSize: 16,
+            fontWeight: "600",
+          }}
+        >
+          {isUploading ? "Uploading..." : "Upload"}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={{
+          width: "90%",
+          paddingVertical: 12,
+          backgroundColor: "#FF5A5F", // Distinct red for cancel
+          borderRadius: 8,
+          alignItems: "center",
+        }}
+        onPress={() => setModalVisible(false)}
+      >
+        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
     </View>
   </View>
 </Modal>
+
+
+
 
     </ScrollView>
   );

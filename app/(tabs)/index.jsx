@@ -140,9 +140,7 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <View
-        contentContainerStyle={[
-          styles.content,
-        ]}
+        style={styles.content}
       >
         {/* Calendar Section */}
         <View style={styles.calendar}>
@@ -151,35 +149,39 @@ const Dashboard = () => {
 
         {/* Action Tiles */}
         <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.actionTile}
-            onPress={() => navigation.navigate("MemoryUpload")}
-          >
-            <Ionicons name="cloud-upload-outline" size={28} color="#19747E" />
-            <Text style={styles.tileText}>Upload Memory</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionTile}
-            onPress={() => navigation.navigate("LovedOneProfile")}
-          >
-            <Ionicons name="person-add-outline" size={28} color="#FFC55B" />
-            <Text style={styles.tileText}>Create Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionTile}
-            onPress={() => navigation.navigate("MediaGallery")}
-          >
-            <Ionicons name="images-outline" size={28} color="#428EFF" />
-            <Text style={styles.tileText}>View Gallery</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionTile}
-            onPress={() => navigation.navigate("CreateCapsule")}
-          >
-            <Ionicons name="cube-outline" size={28} color="#F1465A" />
-            <Text style={styles.tileText}>Create Capsule</Text>
-          </TouchableOpacity>
-        </View>
+  <TouchableOpacity
+    style={styles.actionTile}
+    onPress={() => navigation.navigate("MemoryUpload")}
+  >
+    <Ionicons name="cloud-upload-outline" size={28} color="#19747E" style={styles.tileIcon} />
+    <Text style={styles.tileText}>Upload Memory</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.actionTile}
+    onPress={() => navigation.navigate("LovedOneProfile")}
+  >
+    <Ionicons name="person-add-outline" size={28} color="#19747E" style={styles.tileIcon} />
+    <Text style={styles.tileText}>Create Profile</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.actionTile}
+    onPress={() => navigation.navigate("MediaGallery")}
+  >
+    <Ionicons name="images-outline" size={28} color="#19747E" style={styles.tileIcon} />
+    <Text style={styles.tileText}>View Gallery</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.actionTile}
+    onPress={() => navigation.navigate("CreateCapsule")}
+  >
+    <Ionicons name="cube-outline" size={28} color="#19747E" style={styles.tileIcon} />
+    <Text style={styles.tileText}>Create Capsule</Text>
+  </TouchableOpacity>
+</View>
+
       </View>
     </View>
   );
@@ -187,7 +189,7 @@ const Dashboard = () => {
 
 const styles = StyleSheet.create({
   heroSection: {
-    height: 300, // Set height for hero image
+    height: 250, // Set height for hero image
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
@@ -213,13 +215,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#19747E",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
+    paddingVertical: 14, // Adjust padding for a smaller button size
+    paddingHorizontal: 15,
+    borderRadius: 8,
     position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-  },
+    top: 150, // Bring it closer to the top
+    left: 20, // Align it to the left
+    width: "65%",
+    justifyContent: "center"
+  },  
   heroButtonText: {
     color: "#fff",
     fontSize: 16,
@@ -228,33 +232,46 @@ const styles = StyleSheet.create({
   content: {
     padding: 10,
     backgroundColor: "#f4f4f6",
+    flex: 1,
+    justifyContent: "space-between",
+    borderTopLeftRadius: 20, // Rounded top left corner
+    borderTopRightRadius: 20, // Rounded top right corner
+    marginTop: -25, // Slightly pull it up to align with the hero section
   },
   calendar: {
     alignItems: "center",
-    paddingBottom: 20,
-    paddingTop: 15
+    paddingBottom: 10,
   },
   actionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-evenly",
-    // marginVertical: 20,
+    flexDirection: "column", // Arrange tiles in a single column
+    alignItems: "center", // Center align tiles horizontally
+    paddingHorizontal: 20, // Add some padding on the sides
+    paddingBottom: 20, // Reduce space at the bottom
+    marginBottom: 0, // Ensure no extra margin at the bottom
   },
   actionTile: {
-    width: "40%",
-    height: 140,
-    borderRadius: 10,
-    backgroundColor: "#fff",
-    marginBottom: 20,
-    padding: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    width: "95%", // Adjust width for consistent margins
+    height: 92, // Adjust height
+    borderRadius: 12, // Rounded corners
+    backgroundColor: "#F9F9F9", // Light background color
+    marginBottom: 20, // Space between tiles
+    alignItems: "center", // Center align content horizontally
+    justifyContent: "center", // Center align content vertically
+    shadowColor: "#000", // Shadow for a subtle elevation
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2, // Shadow on Android
+    borderWidth: 1, // Optional: Add a subtle border
+    borderColor: "#E6E6E6", // Light gray border
+  },
+  tileIcon: {
+    marginBottom: 10, // Space between icon and text
   },
   tileText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-    marginTop: 10,
+    fontSize: 16, // Adjust font size
+    fontWeight: "600", // Make text bold
+    color: "#333", // Dark gray color for text
   },
 });
 
