@@ -16,13 +16,34 @@ export default function TabsLayout() {
             else if (route.name === "MemoryVault") iconName = "albums";
             else if (route.name === "CapsuleTimeline") iconName = "time";
             else if (route.name === "MemoryChat") iconName = "chatbubbles";
-            return <Ionicons name={iconName} size={size} color={color} />;
+
+            return <Ionicons name={iconName} size={22} color={color} />;
           },
           tabBarActiveTintColor: PRIMARY_TEAL,
           tabBarInactiveTintColor: "gray",
+          tabBarStyle: {
+            height: 80, // Increased height for better spacing
+            backgroundColor: "#fff",
+            borderTopColor: "transparent",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+          tabBarIconStyle: {
+            marginBottom: 4
+          },
+          tabBarLabelStyle: {
+            fontSize: 12, // Slightly larger label for readability
+            fontWeight: "500",
+            marginTop: -4, // Align label closer to the icon
+          },
+          tabBarItemStyle: {
+            justifyContent: "center",
+            alignItems: "center",
+            paddingVertical: 8,
+          },
         })}
       >
-        <Tabs.Screen name="index" options={{ headerShown: false, title: "Dashboard" }} />
+        <Tabs.Screen name="index" options={{ headerShown: false, title: "Home" }} />
         <Tabs.Screen name="MemoryVault" options={{ title: "Memory Vault" }} />
         <Tabs.Screen name="CapsuleTimeline" options={{ title: "Capsules" }} />
         <Tabs.Screen name="MemoryChat" options={{ title: "Memory Chat" }} />

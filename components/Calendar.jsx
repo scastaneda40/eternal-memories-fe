@@ -1,27 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 const Calendar = () => {
-  const [selectedDate, setSelectedDate] = useState(6); // Initially select "6"
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dates = [2, 3, 4, 5, 6, 7, 8]; // Corresponding dates for the week
+  const [selectedDate, setSelectedDate] = useState(null); // Random date highlighted
+  const [currentWeek, setCurrentWeek] = useState([]);
+
+  useEffect(() => {
+    const getCurrentWeek = () => {
+      const today = new Date();
+      const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Sunday
+      const week = Array.from({ length: 7 }).map((_, index) => {
+        const date = new Date(firstDayOfWeek);
+        date.setDate(firstDayOfWeek.getDate() + index);
+        return {
+          day: date.toLocaleDateString("en-US", { weekday: "short" }), // e.g., "Sun"
+          date: date.getDate(), // e.g., 2 (day of the month)
+        };
+      });
+      setCurrentWeek(week);
+
+      // Set a random date from the week as the initially selected date
+      const randomIndex = Math.floor(Math.random() * week.length);
+      setSelectedDate(week[randomIndex].date);
+    };
+
+    getCurrentWeek();
+  }, []);
 
   return (
     <View style={styles.calendarContainer}>
       <View style={styles.row}>
-        {days.map((day, index) => (
+        {currentWeek.map(({ day, date }, index) => (
           <TouchableOpacity
-            key={day}
+            key={index}
             style={[
               styles.dayDateContainer,
-              selectedDate === dates[index] && styles.activeContainer,
+              selectedDate === date && styles.activeContainer,
             ]}
-            onPress={() => setSelectedDate(dates[index])}
+            onPress={() => setSelectedDate(date)}
           >
             <Text
               style={[
                 styles.dayText,
-                selectedDate === dates[index] && styles.activeText,
+                selectedDate === date && styles.activeText,
               ]}
             >
               {day}
@@ -29,10 +50,10 @@ const Calendar = () => {
             <Text
               style={[
                 styles.dateText,
-                selectedDate === dates[index] && styles.activeText,
+                selectedDate === date && styles.activeText,
               ]}
             >
-              {dates[index]}
+              {date}
             </Text>
           </TouchableOpacity>
         ))}
@@ -87,7 +108,3 @@ const styles = StyleSheet.create({
 });
 
 export default Calendar;
-
-
-
-

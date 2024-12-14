@@ -15,6 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../constants/supabaseClient";
 import { useUser } from "../constants/UserContext";
 import { Video } from "expo-av";
+import { Dimensions } from "react-native";
+
 
 
 const MediaBankGallery = () => {
@@ -28,6 +30,19 @@ const MediaBankGallery = () => {
   const [uploading, setUploading] = useState(false);
 
   const userId = user?.id; // Ensure safe access
+
+  const { width } = Dimensions.get("window");
+
+  const numColumns = 3; // Number of columns
+  const totalHorizontalPadding = 0.1; // Total horizontal padding as a percentage (10%)
+  const itemMarginPercentage = 0.03; // Margin percentage (2%)
+  const horizontalMarginPercentage = 0.04;
+  const verticalMarginPercentage = 0.03;
+
+  const itemMargin = width * itemMarginPercentage; // Convert margin percentage to pixels
+  const itemWidth = (width * (1 - totalHorizontalPadding) - (numColumns - 1) * itemMargin) / numColumns;
+const itemMarginHorizontal = width * horizontalMarginPercentage; // Horizontal margin in pixels
+const itemMarginVertical = width * verticalMarginPercentage; // Vertical margin in pixels
 
   const requestMediaPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -213,14 +228,28 @@ const renderMediaItem = ({ item }) => {
     <TouchableOpacity onPress={() => setSelectedMedia(item)}>
       {item.media_type === "photo" && (
         // Render image for photos
-        <Image source={{ uri: item.url }} style={styles.mediaImage} />
+        <Image source={{ uri: item.url }} style={{ 
+          width: itemWidth, 
+          height: itemWidth, 
+          marginHorizontal: itemMarginHorizontal / 2,
+          marginVertical: itemMarginVertical / 2, 
+          borderRadius: itemWidth * 0.1 }} />
       )}
       {item.media_type === "video" && (
-        <View style={styles.videoThumbnailContainer}>
+        <View style={{ 
+          width: itemWidth, 
+          height: itemWidth, 
+          marginHorizontal: itemMarginHorizontal / 2,
+          marginVertical: itemMarginVertical / 2, // Adjust vertical margin
+          }}>
           {/* Use Video Component to Render First Frame as Thumbnail */}
           <Video
             source={{ uri: item.url }}
-            style={styles.mediaImage}
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: itemWidth * 0.1
+            }}
             resizeMode="cover"
             shouldPlay={false} // Ensure video does not autoplay
             isLooping={false}
@@ -255,9 +284,9 @@ const renderMediaItem = ({ item }) => {
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderMediaItem}
           numColumns={3}
-          contentContainerStyle={styles.gallery}
-          columnWrapperStyle={styles.columnWrapper}
-        />
+          contentContainerStyle={{ paddingHorizontal: itemMargin / 2 }} // Dynamic padding
+          columnWrapperStyle={{ justifyContent: "space-between" }} // Even spacing
+          />
       ) : (
         <Text style={styles.noMediaText}>No media found</Text>
       )}
@@ -362,8 +391,6 @@ const renderMediaItem = ({ item }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    gallery: { paddingHorizontal: 30 },
-    mediaImage: { width: 100, height: 100, margin: 5, borderRadius: 10 },
     noMediaText: { fontSize: 16, color: "#999", textAlign: "center", marginTop: 20 },
     columnWrapper: { justifyContent: "flex-start" },
     modalContainer: {
@@ -431,7 +458,8 @@ const styles = StyleSheet.create({
       marginHorizontal: 20,
       marginVertical: 30,
       alignItems: "center",
-      marginTop: 20
+      marginTop: 20,
+      width: "90%"
     },
     buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
     fullscreenImage: { width: "90%", height: "60%", marginBottom: 15, borderRadius: 10 },

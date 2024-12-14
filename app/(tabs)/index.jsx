@@ -16,6 +16,8 @@ import Calendar from "../../components/Calendar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProfile } from "../../constants/ProfileContext";
 import { useUser } from "../../constants/UserContext";
+import { Dimensions } from "react-native";
+
 
 const Dashboard = () => {
   const navigation = useNavigation();
@@ -24,6 +26,9 @@ const Dashboard = () => {
 
   const { profile, setProfile } = useProfile();
   const { user } = useUser();
+
+  const { width, height } = Dimensions.get("window");
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -189,7 +194,7 @@ const Dashboard = () => {
 
 const styles = StyleSheet.create({
   heroSection: {
-    height: 250, // Set height for hero image
+    height: 260, // Set height for hero image
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
@@ -245,26 +250,28 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: "column", // Arrange tiles in a single column
     alignItems: "center", // Center align tiles horizontally
-    paddingHorizontal: 20, // Add some padding on the sides
-    paddingBottom: 20, // Reduce space at the bottom
+    paddingHorizontal: "5%", // Add some padding on the sides
+    paddingBottom: "5%", // Reduce space at the bottom
     marginBottom: 0, // Ensure no extra margin at the bottom
   },
   actionTile: {
-    width: "95%", // Adjust width for consistent margins
-    height: 92, // Adjust height
+    width: "100%", // Full width for consistent alignment
+    height: 120, // Fixed height for consistent appearance
     borderRadius: 12, // Rounded corners
     backgroundColor: "#F9F9F9", // Light background color
-    marginBottom: 20, // Space between tiles
-    alignItems: "center", // Center align content horizontally
-    justifyContent: "center", // Center align content vertically
-    shadowColor: "#000", // Shadow for a subtle elevation
+    marginBottom: 15, // Fixed vertical spacing between tiles
+    marginHorizontal: 0, // No additional horizontal margin since width is 100%
+    alignItems: "center", // Center content horizontally
+    justifyContent: "center", // Center content vertically
+    shadowColor: "#000", // Shadow for subtle elevation
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2, // Shadow on Android
-    borderWidth: 1, // Optional: Add a subtle border
+    elevation: 2, // Shadow for Android
+    borderWidth: 1, // Optional border
     borderColor: "#E6E6E6", // Light gray border
   },
+  
   tileIcon: {
     marginBottom: 10, // Space between icon and text
   },
