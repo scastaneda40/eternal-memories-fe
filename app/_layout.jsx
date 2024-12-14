@@ -50,8 +50,22 @@ export default function RootLayout() {
               headerShown: true, 
               headerBackTitleVisible: false,
               headerBackTitileVisible: false,
-              headerLeft: ({ canGoBack }) => canGoBack ? <BackButton /> : null 
+              headerLeft: ({ canGoBack }) => canGoBack ? <BackButton /> : null,
+              headerStyle: {
+                elevation: 0,
+                shadowOpacity: 0,
+                borderBottomWidth: 0,
+                shadowColor: "transparent",
+                backgroundColor: "white"
+              } 
               }}>
+              <Stack.Screen
+                name="sign-in/index"
+                options={{
+                  headerTitle: "", // Remove the default title
+                  headerShown: false, // Optional: Hide the entire header if needed
+                }}
+              />
               {/* Main Tab Navigator */}
               <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: "" }} />
               {/* Additional Routes */}
