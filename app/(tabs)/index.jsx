@@ -120,7 +120,7 @@ const Dashboard = () => {
 
         <TouchableOpacity
           style={styles.profileIcon}
-          onPress={() => navigation.navigate("LovedOneProfile")}
+          onPress={() => navigation.navigate("SettingsPage")}
         >
           <Image
             source={{

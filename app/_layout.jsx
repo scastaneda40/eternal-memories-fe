@@ -66,6 +66,16 @@ export default function RootLayout() {
                   headerShown: false, // Optional: Hide the entire header if needed
                 }}
               />
+              <Stack.Screen
+                  name="SettingsPage" // Route name
+                  options={{
+                    headerTitle: "Account Settings", // Customize header title
+                    // headerStyle: {
+                    //   backgroundColor: "#19747E",
+                    // },
+                    // headerTintColor: "#fff", // Header text and icon color
+                  }}
+                />
               {/* Main Tab Navigator */}
               <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: "" }} />
               {/* Additional Routes */}

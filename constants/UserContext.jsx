@@ -28,8 +28,14 @@ export const UserProvider = ({ children }) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          setUser({ id: data.id });
-          AsyncStorage.setItem("user", JSON.stringify({ id: data.id }));
+          const userData = {
+            id: data.id,
+            name: data.name || "Anonymous",
+            email: data.email
+          }
+          console.log('user data', userData)
+          setUser(userData);
+          AsyncStorage.setItem("user", JSON.stringify(userData));
         })
         .catch((err) => console.error("Error fetching user UUID:", err));
     }
