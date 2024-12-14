@@ -7,6 +7,7 @@ import { ProfileProvider } from "../constants/ProfileContext";
 import { clerkPublishableKey } from "../constants/clerkClient";
 import * as SecureStore from 'expo-secure-store'
 import { TokenCache } from '@clerk/clerk-expo/dist/cache'
+import BackButton from "../components/BackButton";
 
 
 
@@ -45,7 +46,12 @@ export default function RootLayout() {
       <ClerkProvider publishableKey={clerkPublishableKey}>
         <UserProvider>
           <ProfileProvider>
-            <Stack screenOptions={{ headerShown: true, headerBackTitleVisible: false }}>
+            <Stack screenOptions={{ 
+              headerShown: true, 
+              headerBackTitleVisible: false,
+              headerBackTitileVisible: false,
+              headerLeft: ({ canGoBack }) => canGoBack ? <BackButton /> : null 
+              }}>
               {/* Main Tab Navigator */}
               <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: "" }} />
               {/* Additional Routes */}

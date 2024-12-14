@@ -4,24 +4,28 @@ import { supabase } from "../../constants/supabaseClient";
 import { useUser } from "../../constants/UserContext";
 import { convertUTCToLocal, convertUTCToSpecifiedZone } from "../../utils/dateUtils";
 import { useNavigation } from "@react-navigation/native";
-import { getPathWithConventionsCollapsed } from "expo-router/build/fork/getPathFromState-forks";
+import { useProfile } from "../../constants/ProfileContext";
 
 const CapsuleTimeline = () => {
   const navigation = useNavigation();
   const { userId } = useUser();
+  const { profile } = useProfile();
   const [view, setView] = useState("upcoming");
   const [capsules, setCapsules] = useState([]);
 
   useEffect(() => {
-    fetchCapsules();
-  }, [view]);
+    if (userId && profile?.id) {
+      fetchCapsules();
+    }
+  }, [view, userId, profile?.id]);
 
   const fetchCapsules = async () => {
     try {
       let query = supabase
         .from("capsules")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("profile_id", profile.id); // Filter by current profile
 
       if (view === "upcoming") {
         query = query.gte("release_date", new Date().toISOString());
@@ -33,8 +37,7 @@ const CapsuleTimeline = () => {
         ascending: view === "upcoming",
       });
 
-      if (data, error) {
-        console.log('capsule data', data)
+      if (error) {
         console.error("Error fetching capsules:", error.message);
         return;
       }
@@ -53,7 +56,7 @@ const CapsuleTimeline = () => {
       const { data: mediaFiles, error } = await supabase
         .from("media")
         .select("*")
-        .eq("capsule_id", capsule.id); // Use capsule.id
+        .eq("capsule_id", capsule.id);
 
       if (error) {
         console.error("Error fetching media files:", error.message);
@@ -63,7 +66,7 @@ const CapsuleTimeline = () => {
       navigation.navigate("EditCapsule", {
         capsuleDetails: capsule,
         mediaFiles: mediaFiles || [],
-        isEditing: true, // Indicate edit flow
+        isEditing: true,
       });
     } catch (err) {
       console.error("Error navigating to EditCapsule:", err.message);
@@ -130,6 +133,7 @@ const CapsuleTimeline = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#fff" },

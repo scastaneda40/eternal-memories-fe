@@ -22,37 +22,96 @@ const Dashboard = () => {
   const [highlightedMemory, setHighlightedMemory] = useState(null);
   const insets = useSafeAreaInsets();
 
-  const { profile } = useProfile();
+  const { profile, setProfile } = useProfile();
   const { user } = useUser();
 
   useEffect(() => {
-    const fetchHighlightedMemory = async () => {
+    const fetchProfile = async () => {
+      console.log("Fetching profiles...");
       try {
-        const { data, error } = await supabase
-          .from("memories")
+        const { data: profiles, error } = await supabase
+          .from("profile")
           .select("*")
-          .order("created_at", { ascending: false })
-          .limit(1);
-
+          .eq("user_id", user?.id);
+  
         if (error) {
-          console.error("Error fetching memory:", error.message);
+          console.error("Error fetching profiles:", error.message);
+          return;
+        }
+  
+        if (profiles && profiles.length > 0) {
+          console.log("Profiles found:", profiles);
+          // Set the first profile if none is set in the context
+          if (!profile?.id) {
+            setProfile(profiles[0]); // Update profile context
+          }
         } else {
-          setHighlightedMemory(data[0]);
+          console.log("No profiles found for this user.");
         }
       } catch (err) {
-        console.error("Unexpected error fetching memory:", err);
+        console.error("Unexpected error fetching profiles:", err);
+      }
+    };
+  
+    if (user?.id && !profile?.id) {
+      fetchProfile();
+    }
+  }, [user?.id, profile?.id, setProfile]);
+
+
+  useEffect(() => {
+    const fetchRandomImage = async () => {
+      console.log("Fetching random image...");
+      try {
+        const { data: memories, error } = await supabase
+          .from("memories")
+          .select(`
+            *,
+            memory_media (
+              media_bank (
+                url
+              )
+            )
+          `)
+          .eq("user_id", user?.id)
+          .eq("profile_id", profile?.id);
+
+        if (error) {
+          console.error("Error fetching memories:", error.message);
+          return;
+        }
+
+        // Flatten and filter out video URLs
+        const imageUrls = memories
+          .flatMap((memory) => memory.memory_media.map((media) => media.media_bank.url))
+          .filter((url) => !url.endsWith(".mp4") && !url.endsWith(".mov"));
+
+        if (imageUrls.length > 0) {
+          const randomImage = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+          console.log("Random image selected:", randomImage);
+          setHighlightedMemory(randomImage); // Set the random image
+        } else {
+          console.log("No images found for the user and profile.");
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching memories:", err);
       }
     };
 
-    fetchHighlightedMemory();
-  }, []);
+    if (profile?.id) {
+      fetchRandomImage();
+    }
+  }, [profile?.id, user?.id]);
+  
 
+  
+  
   return (
     <View style={{ flex: 1 }}>
       {/* Hero Section */}
       <ImageBackground
         source={{
-          uri: highlightedMemory?.file_url || "https://via.placeholder.com/500",
+          uri: highlightedMemory || "https://via.placeholder.com/500",
         }}
         style={styles.heroSection}
         resizeMode="cover"
@@ -80,7 +139,7 @@ const Dashboard = () => {
       </ImageBackground>
 
       {/* Main Content */}
-      <ScrollView
+      <View
         contentContainerStyle={[
           styles.content,
         ]}
@@ -121,7 +180,7 @@ const Dashboard = () => {
             <Text style={styles.tileText}>Create Capsule</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 };
@@ -172,7 +231,8 @@ const styles = StyleSheet.create({
   },
   calendar: {
     alignItems: "center",
-    paddingBottom: 20
+    paddingBottom: 20,
+    paddingTop: 15
   },
   actionsContainer: {
     flexDirection: "row",
