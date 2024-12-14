@@ -124,7 +124,7 @@ const Dashboard = () => {
         >
           <Image
             source={{
-              uri: "https://via.placeholder.com/100",
+                uri: user?.avatar_url || "https://via.placeholder.com/100",
             }}
             style={styles.avatar}
           />

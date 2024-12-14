@@ -31,7 +31,8 @@ export const UserProvider = ({ children }) => {
           const userData = {
             id: data.id,
             name: data.name || "Anonymous",
-            email: data.email
+            email: data.email,
+            avatar_url: data.avatar_url || null
           }
           console.log('user data', userData)
           setUser(userData);
