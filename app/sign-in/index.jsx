@@ -10,6 +10,8 @@ import {
 import { useSignIn, useUser as useClerkUser } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import { useUser } from "../../constants/UserContext";
+import { supabase } from "../../constants/supabaseClient";
+
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -80,38 +82,33 @@ export default function SignInScreen() {
 
   const proceedWithBackendRequest = async (clerkUserId) => {
     try {
-        console.log("Preparing request to backend...");
-        
-        // Ensure clerkUser object has email
-        if (!clerkUser || !clerkUser.emailAddresses[0]?.emailAddress) {
-            console.error("Missing user email address from Clerk user object.");
-            return;
-        }
-
-        const email = clerkUser.emailAddresses[0].emailAddress;
-
-        const response = await fetch("http://192.168.1.55:5000/users", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ clerk_user_id: clerkUserId, email }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Backend response:", data);
-        setUser({ id: data.id });
-
-        router.replace("/"); // Navigate to dashboard
+      const email = clerkUser.emailAddresses[0]?.emailAddress;
+  
+      console.log("Payload being sent to backend:", {
+        clerk_user_id: clerkUserId,
+        email,
+      });
+  
+      const response = await fetch("http://192.168.1.55:5000/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerk_user_id: clerkUserId, email }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      console.log("Response received from backend:", data);
+  
+      setUser(data);
+      router.replace("/");
     } catch (err) {
-        console.error("Error communicating with backend:", err.message);
+      console.error("Error communicating with backend:", err.message);
     }
-};
-
+  };
+  
 
 
 

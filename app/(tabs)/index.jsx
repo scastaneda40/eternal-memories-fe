@@ -194,7 +194,7 @@ const Dashboard = () => {
 
 const styles = StyleSheet.create({
   heroSection: {
-    height: 260, // Set height for hero image
+    height: 265, // Set height for hero image
     justifyContent: "center",
     alignItems: "center",
     position: "relative",

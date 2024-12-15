@@ -17,30 +17,38 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      const payload = {
+        clerk_user_id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress,
+      };
+  
+      console.log("Payload being sent to backend:", payload);
+  
+      try {
+        const response = await fetch("http://192.168.1.55:5000/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+  
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        console.log("Response received from backend:", data);
+        setUser(data);
+      } catch (error) {
+        console.error("Error fetching user UUID:", error.message);
+      }
+    };
+  
     if (clerkUser && isSignedIn) {
-      fetch("http://192.168.1.55/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clerk_user_id: clerkUser.id,
-          email: clerkUser.primaryEmailAddress?.emailAddress || null,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          const userData = {
-            id: data.id,
-            name: data.name || "Anonymous",
-            email: data.email,
-            avatar_url: data.avatar_url || null
-          }
-          console.log('user data', userData)
-          setUser(userData);
-          AsyncStorage.setItem("user", JSON.stringify(userData));
-        })
-        .catch((err) => console.error("Error fetching user UUID:", err));
+      fetchUser();
     }
   }, [clerkUser, isSignedIn]);
+  
 
   return (
     <UserContext.Provider value={{ user, setUser }}>
