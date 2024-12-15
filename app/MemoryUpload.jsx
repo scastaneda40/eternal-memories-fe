@@ -273,7 +273,7 @@ const [isLoading, setLoading] = useState(false);
         });
       });
   
-      const response = await fetch("http://192.168.1.116:5000/upload", {
+      const response = await fetch("http://192.168.1.55:5000/upload", {
         method: "POST",
         body: formData,
         headers: { "Content-Type": "multipart/form-data" },

@@ -80,23 +80,38 @@ export default function SignInScreen() {
 
   const proceedWithBackendRequest = async (clerkUserId) => {
     try {
-        const response = await fetch("http://192.168.1.116:5000/users", {
+        console.log("Preparing request to backend...");
+        
+        // Ensure clerkUser object has email
+        if (!clerkUser || !clerkUser.emailAddresses[0]?.emailAddress) {
+            console.error("Missing user email address from Clerk user object.");
+            return;
+        }
+
+        const email = clerkUser.emailAddresses[0].emailAddress;
+
+        const response = await fetch("http://192.168.1.55:5000/users", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ clerk_user_id: clerkUserId }),
+            body: JSON.stringify({ clerk_user_id: clerkUserId, email }),
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log("Backend response:", data);
         setUser({ id: data.id });
 
-        // Navigate directly to Dashboard
-        router.replace("/");
+        router.replace("/"); // Navigate to dashboard
     } catch (err) {
         console.error("Error communicating with backend:", err.message);
     }
 };
+
 
 
 

@@ -18,7 +18,7 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     if (clerkUser && isSignedIn) {
-      fetch("http://192.168.1.116:5000/users", {
+      fetch("http://192.168.1.55/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
