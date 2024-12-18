@@ -55,7 +55,7 @@ const CreateCapsule = () => {
       if (error) {
         console.error("Error fetching media bank:", error.message);
       } else {
-        setMediaBank(data);
+        setMediaBank(data || []);
       }
     } catch (err) {
       console.error("Unexpected error fetching media bank:", err.message);
@@ -63,6 +63,12 @@ const CreateCapsule = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isMediaBankModalVisible) {
+      fetchMediaBank();
+    }
+  }, [isMediaBankModalVisible]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -91,23 +97,112 @@ const CreateCapsule = () => {
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Final Capsule Data:", {
-      title,
-      description,
-      release_date: releaseDate.toISOString(),
-      privacy,
-      media,
-    });
-
-    Alert.alert("Capsule Created!", "Your capsule has been successfully created.");
-    setReviewModalVisible(false);
+  const handleReview = () => {
+    setReviewModalVisible(true);
   };
+
+  const handleSubmit = async () => {
+  if (!title || !description || !releaseDate || !userId || !profile?.id) {
+    Alert.alert("Error", "All fields are required.");
+    return;
+  }
+
+  const validPrivacyLevels = ["private", "family", "public"];
+  if (!validPrivacyLevels.includes(privacy)) {
+    Alert.alert("Error", "Invalid privacy level.");
+    return;
+  }
+
+  try {
+    console.log("Starting capsule creation...");
+
+    // Insert capsule record
+    const { data: capsuleData, error: capsuleError } = await supabase
+      .from("capsules")
+      .insert([
+        {
+          title,
+          description,
+          release_date: releaseDate.toISOString(),
+          privacy_level: privacy,
+          user_id: userId,
+          profile_id: profile.id,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      ])
+      .select()
+      .single();
+
+    if (capsuleError) {
+      console.error("Capsule insertion error:", capsuleError.message);
+      throw capsuleError;
+    }
+
+    console.log("Capsule saved:", capsuleData);
+
+    const capsuleMediaEntries = [];
+
+    for (const item of media) {
+      console.log("Processing media item:", item);
+
+      // Insert into media_bank
+      const { data: mediaBankData, error: mediaBankError } = await supabase
+        .from("media_bank")
+        .insert([
+          {
+            user_id: userId,
+            profile_id: profile.id,
+            url: item.uri,
+            name: item.name || "Untitled Media",
+            media_type: item.media_type,
+          },
+        ])
+        .select()
+        .single();
+
+      if (mediaBankError) {
+        console.error("Media bank insertion error:", mediaBankError.message, "Item:", item);
+        continue; // Skip this item
+      }
+
+      console.log("Media bank record saved:", mediaBankData);
+
+      // Prepare entries for capsule_media
+      capsuleMediaEntries.push({
+        capsule_id: capsuleData.id,
+        media_id: mediaBankData.id, // Reference saved media ID
+      });
+    }
+
+    // Batch insert into capsule_media
+    if (capsuleMediaEntries.length > 0) {
+      const { error: capsuleMediaError } = await supabase
+        .from("capsule_media")
+        .insert(capsuleMediaEntries);
+
+      if (capsuleMediaError) {
+        console.error("Capsule media insertion error:", capsuleMediaError.message);
+        throw capsuleMediaError;
+      }
+
+      console.log("Capsule media entries saved:", capsuleMediaEntries);
+    } else {
+      console.warn("No media linked to capsule.");
+    }
+
+    Alert.alert("Success", "Capsule created successfully!");
+    setReviewModalVisible(false);
+  } catch (error) {
+    console.error("Error submitting capsule:", error.message);
+    Alert.alert("Error", "Failed to create capsule.");
+  }
+};
+
+  
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff", padding: 10 }}>
       <ScrollView>
-        {/* Input Fields */}
         <Text style={{ fontSize: 16, marginVertical: 8 }}>Title</Text>
         <TextInput
           style={{
@@ -136,21 +231,6 @@ const CreateCapsule = () => {
           multiline
         />
 
-        <Text style={{ fontSize: 16, marginVertical: 8 }}>Release Date</Text>
-        <Button title="Pick Date" onPress={() => setDatePickerVisibility(true)} />
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={(date) => {
-            setReleaseDate(date);
-            setDatePickerVisibility(false);
-          }}
-          onCancel={() => setDatePickerVisibility(false)}
-        />
-        <Text style={{ fontSize: 14, marginVertical: 8 }}>
-          {releaseDate.toDateString()}
-        </Text>
-
         <Text style={{ fontSize: 16, marginVertical: 8 }}>Privacy</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           {Object.keys(privacyLevels).map((level) => (
@@ -177,43 +257,149 @@ const CreateCapsule = () => {
           onPress={() => setMediaBankModalVisible(true)}
         />
 
-        {/* Media Preview */}
-        {media.length > 0 && (
-          <View style={{ marginVertical: 20, alignItems: "center" }}>
-            <Carousel
-              loop
-              width={300}
-              height={200}
-              data={media}
-              renderItem={({ item }) => (
-                <View style={{ width: 300, height: 200 }}>
-                  {item.media_type === "video" ? (
-                    <Video
-                      source={{ uri: item.uri }}
-                      style={{ width: "100%", height: "100%" }}
-                      useNativeControls
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        resizeMode: "cover",
-                        borderRadius: 8,
-                      }}
-                    />
-                  )}
+<Modal
+  visible={isMediaBankModalVisible}
+  animationType="slide"
+  onRequestClose={() => setMediaBankModalVisible(false)} // Allows closing the modal
+>
+  <SafeAreaView style={{ flex: 1, backgroundColor: "#fff", padding: 10 }}>
+    <Text
+      style={{
+        fontSize: 20,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 20,
+      }}
+    >
+      Select Media from Media Bank
+    </Text>
+    {isLoading ? (
+      <Text style={{ textAlign: "center" }}>Loading...</Text>
+    ) : (
+      <FlatList
+        data={mediaBank}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={3}
+        renderItem={({ item }) => {
+          const isSelected = media.some((mediaItem) => mediaItem.uri === item.url);
+          return (
+            <TouchableOpacity
+              onPress={() => handleSelectFromMediaBank(item)}
+              style={{
+                flex: 1,
+                margin: 5,
+                aspectRatio: 1,
+                maxWidth: "30%",
+                borderRadius: 8,
+                overflow: "hidden",
+                borderWidth: isSelected ? 2 : 0,
+                borderColor: isSelected ? "#19747E" : "transparent",
+                position: "relative",
+              }}
+            >
+              {item.media_type === "video" ? (
+                <Video
+                  source={{ uri: item.url }}
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Image
+                  source={{ uri: item.url }}
+                  style={{ width: "100%", height: "100%" }}
+                />
+              )}
+              {isSelected && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 5,
+                    right: 5,
+                    backgroundColor: "#19747E",
+                    borderRadius: 12,
+                    width: 24,
+                    height: 24,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 16 }}>✓</Text>
                 </View>
               )}
-            />
-          </View>
-        )}
+            </TouchableOpacity>
+          );
+        }}
+      />
+    )}
+    <TouchableOpacity
+      onPress={() => setMediaBankModalVisible(false)}
+      style={{
+        backgroundColor: "#19747E",
+        padding: 15,
+        borderRadius: 5,
+        alignItems: "center",
+        marginTop: 10,
+      }}
+    >
+      <Text style={{ color: "#fff", fontSize: 16 }}>Close</Text>
+    </TouchableOpacity>
+  </SafeAreaView>
+</Modal>
 
-        {/* Review Button */}
+{media.length > 0 && (
+  <View style={{ marginVertical: 20, alignItems: "center" }}>
+    <Carousel
+      loop
+      width={300}
+      height={200}
+      data={media}
+      renderItem={({ item }) => (
+        <View style={{ width: 300, height: 200, position: "relative" }}>
+          {item.media_type === "video" ? (
+            <>
+              <Video
+                source={{ uri: item.uri }}
+                style={{ width: "100%", height: "100%" }}
+                useNativeControls
+                resizeMode="cover"
+              />
+              {/* Video Overlay Icon */}
+              <View
+                style={{
+                  position: "absolute",
+                  top: "40%",
+                  left: "45%",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  borderRadius: 25,
+                  width: 50,
+                  height: 50,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>▶</Text>
+              </View>
+            </>
+          ) : (
+            <Image
+              source={{ uri: item.uri }}
+              style={{
+                width: "100%",
+                height: "100%",
+                resizeMode: "cover",
+                borderRadius: 8,
+              }}
+            />
+          )}
+        </View>
+      )}
+    />
+  </View>
+)}
+
+
         <TouchableOpacity
-          onPress={() => setReviewModalVisible(true)}
+          onPress={handleReview}
           style={{
             backgroundColor: "#19747E",
             padding: 15,
@@ -228,89 +414,120 @@ const CreateCapsule = () => {
 
       {/* Review Modal */}
       <Modal
-        visible={isReviewModalVisible}
-        animationType="slide"
-        onRequestClose={() => setReviewModalVisible(false)}
+  visible={isReviewModalVisible}
+  animationType="slide"
+  onRequestClose={() => setReviewModalVisible(false)}
+>
+  <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
+      {/* Centered Title */}
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: 20,
+        }}
       >
-        <SafeAreaView style={{ flex: 1, padding: 20, backgroundColor: "#fff" }}>
-          <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
-            Review Your Capsule
-          </Text>
-          <Text style={{ fontSize: 16, marginBottom: 10 }}>Title: {title}</Text>
-          <Text style={{ fontSize: 16, marginBottom: 10 }}>Description: {description}</Text>
-          <Text style={{ fontSize: 16, marginBottom: 10 }}>
-            Release Date: {releaseDate.toDateString()}
-          </Text>
-          <Text style={{ fontSize: 16, marginBottom: 10 }}>
-            Privacy Level: {privacyLevels[privacy]}
-          </Text>
+        Review Your Capsule
+      </Text>
 
-          {/* Media Carousel */}
-          {media.length > 0 && (
-            <View style={{ alignItems: "center", marginBottom: 20 }}>
-              <Carousel
-                loop
-                width={300}
-                height={200}
-                data={media}
-                renderItem={({ item }) => (
-                  <View style={{ width: 300, height: 200 }}>
-                    {item.media_type === "video" ? (
-                      <Video
-                        source={{ uri: item.uri }}
-                        style={{ width: "100%", height: "100%" }}
-                        useNativeControls
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Image
-                        source={{ uri: item.uri }}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          resizeMode: "cover",
-                          borderRadius: 8,
-                        }}
-                      />
-                    )}
-                  </View>
-                )}
+      {/* Capsule Details */}
+      <Text style={{ fontSize: 16, marginBottom: 10 }}>Title: {title}</Text>
+      <Text style={{ fontSize: 16, marginBottom: 10 }}>Description: {description}</Text>
+      <Text style={{ fontSize: 16, marginBottom: 10 }}>
+        Release Date: {releaseDate.toDateString()}
+      </Text>
+      <Text style={{ fontSize: 16, marginBottom: 20 }}>
+        Privacy Level: {privacyLevels[privacy]}
+      </Text>
+
+      {/* Media Preview Carousel */}
+      {media.length > 0 && (
+  <View style={{ alignItems: "center", marginBottom: 30 }}>
+    <Carousel
+      loop
+      width={300}
+      height={200}
+      data={media}
+      renderItem={({ item }) => (
+        <View style={{ width: 300, height: 200, borderRadius: 8, overflow: "hidden", position: "relative" }}>
+          {item.media_type === "video" ? (
+            <>
+              <Video
+                source={{ uri: item.uri }}
+                style={{ width: "100%", height: "100%" }}
+                useNativeControls
+                resizeMode="cover"
               />
-            </View>
+              {/* Video Overlay Icon */}
+              <View
+                style={{
+                  position: "absolute",
+                  top: "40%",
+                  left: "45%",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  borderRadius: 25,
+                  width: 50,
+                  height: 50,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>▶</Text>
+              </View>
+            </>
+          ) : (
+            <Image
+              source={{ uri: item.uri }}
+              style={{
+                width: "100%",
+                height: "100%",
+                resizeMode: "cover",
+              }}
+            />
           )}
+        </View>
+      )}
+    />
+  </View>
+)}
 
-          {/* Buttons */}
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={{
-              backgroundColor: "#19747E",
-              padding: 15,
-              borderRadius: 5,
-              alignItems: "center",
-              marginBottom: 10,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 16 }}>Submit Capsule</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setReviewModalVisible(false)}
-            style={{
-              backgroundColor: "#ccc",
-              padding: 15,
-              borderRadius: 5,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#333", fontSize: 16 }}>Back to Edit</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
-      </Modal>
+      {/* Buttons */}
+      <View style={{ marginTop: 20 }}>
+        <TouchableOpacity
+          onPress={handleSubmit}
+          style={{
+            backgroundColor: "#19747E",
+            padding: 15,
+            borderRadius: 5,
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 16 }}>Submit Capsule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setReviewModalVisible(false)}
+          style={{
+            backgroundColor: "#ccc",
+            padding: 15,
+            borderRadius: 5,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#333", fontSize: 16 }}>Back to Edit</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  </SafeAreaView>
+</Modal>
+
+
     </SafeAreaView>
   );
 };
 
 export default CreateCapsule;
-
-
 
 
