@@ -26,7 +26,7 @@ export const UserProvider = ({ children }) => {
       console.log("Payload being sent to backend:", payload);
   
       try {
-        const response = await fetch("http://192.168.1.55:5000/users", {
+        const response = await fetch("http://192.168.1.116:5000/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
