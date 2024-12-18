@@ -84,11 +84,16 @@ export default function RootLayout() {
               <Stack.Screen name="LovedOneProfile"/>
               <Stack.Screen name="CreateCapsule" />
               <Stack.Screen name="CapsuleReview" />
+              <Stack.Screen name="ContactsScreen" />
               <Stack.Screen name="PreviewCapsule" />
               <Stack.Screen name="EditCapsule" />
               <Stack.Screen name="CapsuleTimeline" />
               <Stack.Screen name="MemoryUpload" />
               <Stack.Screen name="MediaBankUpload" />
+              <Stack.Screen
+                name="FamilyNotificationSetup"
+                options={{ title: "Setup Family Notifications" }}
+              />
               <Stack.Screen name="MediaGallery" options={{ title: "Gallery" }} />
               <Stack.Screen name="login" options={{ title: "Log In" }} />
               <Stack.Screen name="SelectLocationScreen" options={{ title: "Select Location" }}   initialParams={{ currentAddress: "", currentLocation: null }} />

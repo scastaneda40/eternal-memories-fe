@@ -14,10 +14,10 @@ import Icon from "react-native-vector-icons/Feather";
 import { useUser } from "../constants/UserContext";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../constants/supabaseClient"; // Ensure your Supabase client is set up
-
-
+import { useNavigation } from "@react-navigation/native";
 
 const SettingsPage = () => {
+  const navigation = useNavigation();
   const [isNotificationEnabled, setNotificationEnabled] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -129,6 +129,12 @@ const SettingsPage = () => {
       <View style={styles.settingsList}>
         <TouchableOpacity style={styles.settingItem}>
           <Text style={styles.settingText}>Manage Profile</Text>
+          <Text style={styles.settingIcon}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity       
+        onPress={() => navigation.navigate("ContactsScreen")} // Navigate to ContactsScreen
+        style={styles.settingItem}>
+          <Text style={styles.settingText}>My Contacts</Text>
           <Text style={styles.settingIcon}>›</Text>
         </TouchableOpacity>
         <View style={styles.settingItem}>

@@ -18,11 +18,14 @@ import Carousel from "react-native-reanimated-carousel";
 import { useUser } from "../constants/UserContext";
 import { useProfile } from "../constants/ProfileContext";
 import { supabase } from "../constants/supabaseClient";
+import { useNavigation } from "@react-navigation/native";
 import { Video } from "expo-av";
 
 const CreateCapsule = () => {
   const { user } = useUser();
   const { profile } = useProfile();
+  const navigation = useNavigation();
+
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -36,6 +39,10 @@ const CreateCapsule = () => {
   const [isLoading, setLoading] = useState(false);
 
   const userId = user?.id;
+
+  const state = navigation.getState();
+console.log("Navigation state:", JSON.stringify(state, null, 2));
+
 
   const privacyLevels = {
     private: "Private",
@@ -71,22 +78,57 @@ const CreateCapsule = () => {
   }, [isMediaBankModalVisible]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setMedia((prev) => [
-        ...prev,
-        ...result.assets.map((asset) => ({
-          uri: asset.uri,
-          media_type: asset.type,
-        })),
-      ]);
+    try {
+      console.log("Requesting permissions...");
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log("Permission status:", status);
+  
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "We need media library access.");
+        return;
+      }
+  
+      console.log("Launching ImagePicker...");
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'], // Allow both images and videos
+        allowsEditing: false,
+        quality: 1,
+      });
+  
+      console.log("ImagePicker result:", result);
+  
+      if (!result.canceled) {
+        const file = result.assets[0];
+        console.log("Selected media file:", file);
+  
+        const mediaType = file.type === "image"
+          ? "photo"
+          : file.type === "video"
+          ? "video"
+          : "unknown";
+  
+        if (mediaType === "unknown") {
+          alert("Unsupported media type selected.");
+          return;
+        }
+  
+        setMedia((prev) => [
+          ...prev,
+          {
+            uri: file.uri, // Use consistent URI formatting
+            media_type: mediaType,
+          },
+        ]);
+      } else {
+        console.log("Image picker canceled");
+      }
+    } catch (error) {
+      console.error("Error in pickImage:", error.message);
     }
   };
+  
+  
+  
 
   const handleSelectFromMediaBank = (item) => {
     const isSelected = media.some((mediaItem) => mediaItem.uri === item.url);
@@ -101,103 +143,128 @@ const CreateCapsule = () => {
     setReviewModalVisible(true);
   };
 
+  const navigateToFamilyNotificationSetup = (capsuleId) => {
+    console.log("Navigation object in CreateCapsule:", navigation); // Check if navigation is valid
+    console.log("capsule id", capsuleId)
+    navigation.navigate("FamilyNotificationSetup", { capsuleId });
+  };
+  
+  
   const handleSubmit = async () => {
-  if (!title || !description || !releaseDate || !userId || !profile?.id) {
-    Alert.alert("Error", "All fields are required.");
-    return;
-  }
-
-  const validPrivacyLevels = ["private", "family", "public"];
-  if (!validPrivacyLevels.includes(privacy)) {
-    Alert.alert("Error", "Invalid privacy level.");
-    return;
-  }
-
-  try {
-    console.log("Starting capsule creation...");
-
-    // Insert capsule record
-    const { data: capsuleData, error: capsuleError } = await supabase
-      .from("capsules")
-      .insert([
-        {
-          title,
-          description,
-          release_date: releaseDate.toISOString(),
-          privacy_level: privacy,
-          user_id: userId,
-          profile_id: profile.id,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
-      ])
-      .select()
-      .single();
-
-    if (capsuleError) {
-      console.error("Capsule insertion error:", capsuleError.message);
-      throw capsuleError;
+    if (!title || !description || !releaseDate || !userId || !profile?.id) {
+      Alert.alert("Error", "All fields are required.");
+      return;
     }
-
-    console.log("Capsule saved:", capsuleData);
-
-    const capsuleMediaEntries = [];
-
-    for (const item of media) {
-      console.log("Processing media item:", item);
-
-      // Insert into media_bank
-      const { data: mediaBankData, error: mediaBankError } = await supabase
-        .from("media_bank")
+  
+    const validPrivacyLevels = ["private", "family", "public"];
+    if (!validPrivacyLevels.includes(privacy)) {
+      Alert.alert("Error", "Invalid privacy level.");
+      return;
+    }
+  
+    try {
+      console.log("Starting capsule creation...");
+  
+      // Insert capsule record
+      const { data: capsuleData, error: capsuleError } = await supabase
+        .from("capsules")
         .insert([
           {
+            title,
+            description,
+            release_date: releaseDate.toISOString(),
+            privacy_level: privacy,
             user_id: userId,
             profile_id: profile.id,
-            url: item.uri,
-            name: item.name || "Untitled Media",
-            media_type: item.media_type,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
         ])
         .select()
         .single();
-
-      if (mediaBankError) {
-        console.error("Media bank insertion error:", mediaBankError.message, "Item:", item);
-        continue; // Skip this item
+  
+      if (capsuleError) {
+        console.error("Capsule insertion error:", capsuleError.message);
+        throw capsuleError;
       }
-
-      console.log("Media bank record saved:", mediaBankData);
-
-      // Prepare entries for capsule_media
-      capsuleMediaEntries.push({
-        capsule_id: capsuleData.id,
-        media_id: mediaBankData.id, // Reference saved media ID
-      });
-    }
-
-    // Batch insert into capsule_media
-    if (capsuleMediaEntries.length > 0) {
-      const { error: capsuleMediaError } = await supabase
-        .from("capsule_media")
-        .insert(capsuleMediaEntries);
-
-      if (capsuleMediaError) {
-        console.error("Capsule media insertion error:", capsuleMediaError.message);
-        throw capsuleMediaError;
+  
+      console.log("Capsule saved:", capsuleData);
+  
+      const capsuleMediaEntries = [];
+  
+      for (const item of media) {
+        console.log("Processing media item:", item);
+  
+        // Insert into media_bank
+        const { data: mediaBankData, error: mediaBankError } = await supabase
+          .from("media_bank")
+          .insert([
+            {
+              user_id: userId,
+              profile_id: profile.id,
+              url: item.uri,
+              name: item.name || "Untitled Media",
+              media_type: item.media_type,
+            },
+          ])
+          .select()
+          .single();
+  
+        if (mediaBankError) {
+          console.error("Media bank insertion error:", mediaBankError.message, "Item:", item);
+          continue; // Skip this item
+        }
+  
+        console.log("Media bank record saved:", mediaBankData);
+  
+        // Prepare entries for capsule_media
+        capsuleMediaEntries.push({
+          capsule_id: capsuleData.id,
+          media_id: mediaBankData.id, // Reference saved media ID
+        });
       }
-
-      console.log("Capsule media entries saved:", capsuleMediaEntries);
-    } else {
-      console.warn("No media linked to capsule.");
+  
+      // Batch insert into capsule_media
+      if (capsuleMediaEntries.length > 0) {
+        const { error: capsuleMediaError } = await supabase
+          .from("capsule_media")
+          .insert(capsuleMediaEntries);
+  
+        if (capsuleMediaError) {
+          console.error("Capsule media insertion error:", capsuleMediaError.message);
+          throw capsuleMediaError;
+        }
+  
+        console.log("Capsule media entries saved:", capsuleMediaEntries);
+      } else {
+        console.warn("No media linked to capsule.");
+      }
+  
+      Alert.alert("Success", "Capsule created successfully!");
+  
+      // Handle family notification setup
+      if (privacy === "family") {
+        Alert.alert(
+          "Family Notifications",
+          "Would you like to set up notifications for family members?",
+          [
+            { text: "Schedule Later", onPress: () => console.log("Notification setup skipped.") },
+            {
+              text: "Set Up Now",
+              onPress: () => {
+                // Navigate to the notification setup screen/modal
+                navigateToFamilyNotificationSetup(capsuleData.id);
+              },
+            },
+          ]
+        );
+      }
+  
+      setReviewModalVisible(false);
+    } catch (error) {
+      console.error("Error submitting capsule:", error.message);
+      Alert.alert("Error", "Failed to create capsule.");
     }
-
-    Alert.alert("Success", "Capsule created successfully!");
-    setReviewModalVisible(false);
-  } catch (error) {
-    console.error("Error submitting capsule:", error.message);
-    Alert.alert("Error", "Failed to create capsule.");
-  }
-};
-
+  };
   
 
   return (
@@ -230,6 +297,32 @@ const CreateCapsule = () => {
           placeholder="Enter description"
           multiline
         />
+
+<Text style={{ fontSize: 16, marginVertical: 8 }}>Release Date</Text>
+<TouchableOpacity
+  onPress={() => setDatePickerVisibility(true)}
+  style={{
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 5,
+    borderColor: "#ccc",
+    justifyContent: "center",
+  }}
+>
+  <Text style={{ fontSize: 16, color: "#333" }}>
+    {releaseDate ? releaseDate.toDateString() : "Select a release date"}
+  </Text>
+</TouchableOpacity>
+<DateTimePickerModal
+  isVisible={isDatePickerVisible}
+  mode="date"
+  onConfirm={(date) => {
+    setReleaseDate(date);
+    setDatePickerVisibility(false);
+  }}
+  onCancel={() => setDatePickerVisibility(false)}
+/>
+
 
         <Text style={{ fontSize: 16, marginVertical: 8 }}>Privacy</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
