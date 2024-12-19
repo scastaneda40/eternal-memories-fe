@@ -94,6 +94,7 @@ export default function RootLayout() {
                 name="FamilyNotificationSetup"
                 options={{ title: "Setup Family Notifications" }}
               />
+              <Stack.Screen name="CapsuleDetails" />
               <Stack.Screen name="MediaGallery" options={{ title: "Gallery" }} />
               <Stack.Screen name="login" options={{ title: "Log In" }} />
               <Stack.Screen name="SelectLocationScreen" options={{ title: "Select Location" }}   initialParams={{ currentAddress: "", currentLocation: null }} />

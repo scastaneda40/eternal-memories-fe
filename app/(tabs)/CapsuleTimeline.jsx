@@ -8,10 +8,14 @@ import { useProfile } from "../../constants/ProfileContext";
 
 const CapsuleTimeline = () => {
   const navigation = useNavigation();
-  const { userId } = useUser();
+  
   const { profile } = useProfile();
   const [view, setView] = useState("upcoming");
   const [capsules, setCapsules] = useState([]);
+
+  const { user } = useUser();
+
+  const userId = user?.id;
 
   useEffect(() => {
     if (userId && profile?.id) {
@@ -53,26 +57,40 @@ const CapsuleTimeline = () => {
 
   const handlePress = async (capsule) => {
     try {
-      const { data: mediaFiles, error } = await supabase
-        .from("media")
-        .select("*")
+      // Fetch media linked to the capsule by manually joining capsule_media and media_bank
+      const { data: capsuleMedia, error } = await supabase
+        .from("capsule_media")
+        .select(`
+          media_id,
+          media_bank (
+            id,
+            url,
+            name,
+            media_type
+          )
+        `)
         .eq("capsule_id", capsule.id);
-
+  
       if (error) {
-        console.error("Error fetching media files:", error.message);
+        console.error("Error fetching media for capsule:", error.message);
         return;
       }
-
-      navigation.navigate("EditCapsule", {
+  
+      // Extract the `media_bank` array from the response
+      const mediaFiles = capsuleMedia.map((entry) => entry.media_bank);
+  
+      console.log("Media files fetched for capsule:", capsule.id, mediaFiles);
+  
+      // Navigate to CapsuleDetails with the capsule details and media files
+      navigation.navigate("CapsuleDetails", {
         capsuleDetails: capsule,
         mediaFiles: mediaFiles || [],
-        isEditing: true,
       });
     } catch (err) {
-      console.error("Error navigating to EditCapsule:", err.message);
+      console.error("Error navigating to CapsuleDetails:", err.message);
     }
   };
-
+  
   const renderCapsule = ({ item }) => {
     const localDate = convertUTCToLocal(item.release_date);
     const specifiedDate = convertUTCToSpecifiedZone(
