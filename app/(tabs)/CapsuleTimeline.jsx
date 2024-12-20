@@ -91,25 +91,51 @@ const CapsuleTimeline = () => {
     }
   };
   
+  const MAX_TITLE_LENGTH = 20;
+
   const renderCapsule = ({ item }) => {
     const localDate = convertUTCToLocal(item.release_date);
     const specifiedDate = convertUTCToSpecifiedZone(
       item.release_date,
       item.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
     );
+  
+    const handleFamilyNotificationSetup = () => {
+      console.log("Navigating to FamilyNotificationSetup with capsuleId:", item.id);
+      navigation.navigate("FamilyNotificationSetup", { capsuleId: item.id });
+    };
 
+    const truncatedTitle =
+    item.title.length > MAX_TITLE_LENGTH
+      ? `${item.title.slice(0, MAX_TITLE_LENGTH)}...`
+      : item.title;
+  
     return (
-      <TouchableOpacity style={styles.capsuleItem} onPress={() => handlePress(item)}>
-        <Text style={styles.title}>{item.title}</Text>
+      <TouchableOpacity onPress={() => handlePress(item)} style={styles.capsuleItem}>
+        <View style={styles.headerRow}>
+          <Text numberOfLines={1} style={styles.title}>{truncatedTitle}</Text>
+          <View style={styles.badgeContainer}>
+            <Text style={[styles.badgeText, styles[item.privacy_level]]}>
+              {item.privacy_level}
+            </Text>
+            {item.privacy_level === "family" && (
+              <TouchableOpacity onPress={handleFamilyNotificationSetup}>
+                <Text style={styles.notificationText}>🔔</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
         <Text style={styles.date}>
           {view === "upcoming"
             ? `Releases on: ${localDate}`
             : `Released on: ${specifiedDate || localDate}`}
         </Text>
-        <Text style={styles.description}>{item.description}</Text>
+        <Text numberOfLines={2} style={styles.description}>{item.description}</Text>
       </TouchableOpacity>
     );
   };
+  
+  
 
   return (
     <View style={styles.container}>
@@ -175,11 +201,57 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 5,
   },
+  title: { fontSize: 18, fontWeight: "bold", flex: 1, marginRight: 8 },
+  date: { fontSize: 14, color: "#888", marginTop: 5 },
+  description: { fontSize: 14, color: "#555", marginTop: 5, overflow: "hidden" },
+  emptyText: { textAlign: "center", fontSize: 16, color: "#888", marginTop: 20 },
+  capsuleItem: {
+    marginBottom: 10,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  badgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    marginRight: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    textTransform: "capitalize",
+  },
+  family: {
+    backgroundColor: "#FFD700", // Gold
+    color: "#FFF",
+  },
+  public: {
+    backgroundColor: "#4CAF50", // Green
+    color: "#FFF",
+  },
+  private: {
+    backgroundColor: "#9E9E9E", // Gray
+    color: "#FFF",
+  },
+  notificationText: {
+    fontSize: 16,
+    color: "#007AFF",
+  },
   title: { fontSize: 18, fontWeight: "bold" },
   date: { fontSize: 14, color: "#888", marginTop: 5 },
-  description: { fontSize: 14, color: "#555", marginTop: 5 },
-  emptyText: { textAlign: "center", fontSize: 16, color: "#888", marginTop: 20 },
+  description: { fontSize: 14, color: "#555", marginTop: 5, overflow: "hidden" },
 });
+
+
 
 export default CapsuleTimeline;
 

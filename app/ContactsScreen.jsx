@@ -9,13 +9,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  SafeAreaView
+  SafeAreaView,
 } from "react-native";
 import * as Contacts from "expo-contacts";
 import { supabase } from "../constants/supabaseClient";
 import { useUser } from "../constants/UserContext";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-
 
 const ContactsScreen = () => {
   const [contacts, setContacts] = useState([]);
@@ -35,7 +34,6 @@ const ContactsScreen = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
-  
 
   const fetchContacts = async () => {
     if (!userId) return;
@@ -98,22 +96,22 @@ const ContactsScreen = () => {
 
   const addContact = async () => {
     const { name, email, phone } = newContact;
-  
+
     if (!name.trim()) {
       Alert.alert("Validation Error", "Name is required.");
       return;
     }
-  
+
     if (email && !isValidEmail(email.trim())) {
       Alert.alert("Validation Error", "Invalid email format.");
       return;
     }
-  
+
     if (phone && !isValidPhoneNumber(phone.trim())) {
       Alert.alert("Validation Error", "Invalid phone number format.");
       return;
     }
-  
+
     try {
       const { error } = await supabase.from("contacts").insert({
         user_id: userId,
@@ -121,7 +119,7 @@ const ContactsScreen = () => {
         email: email?.trim() || null,
         phone: phone?.trim() || null,
       });
-  
+
       if (error) {
         console.error("Error adding contact:", error.message);
         Alert.alert("Error", "Failed to add contact.");
@@ -136,7 +134,24 @@ const ContactsScreen = () => {
       Alert.alert("Error", "Failed to add contact.");
     }
   };
-  
+
+  const deleteContact = async (contactId) => {
+    try {
+      const { error } = await supabase.from("contacts").delete().eq("id", contactId);
+
+      if (error) {
+        console.error("Error deleting contact:", error.message);
+        Alert.alert("Error", "Failed to delete contact.");
+      } else {
+        Alert.alert("Success", "Contact deleted successfully!");
+        fetchContacts();
+      }
+    } catch (error) {
+      console.error("Unexpected error deleting contact:", error.message);
+      Alert.alert("Error", "Failed to delete contact.");
+    }
+  };
+
   useEffect(() => {
     fetchContacts();
   }, []);
@@ -151,10 +166,30 @@ const ContactsScreen = () => {
           data={contacts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={{ padding: 10, borderBottomWidth: 1 }}>
-              <Text style={{ fontWeight: "bold" }}>{item.name}</Text>
-              <Text>{item.email || "No email"}</Text>
-              <Text>{item.phone || "No phone"}</Text>
+            <View
+              style={{
+                padding: 10,
+                borderBottomWidth: 1,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <View>
+                <Text style={{ fontWeight: "bold" }}>{item.name}</Text>
+                <Text>{item.email || "No email"}</Text>
+                <Text>{item.phone || "No phone"}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => deleteContact(item.id)}
+                style={{
+                  backgroundColor: "red",
+                  padding: 8,
+                  borderRadius: 5,
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "bold" }}>Delete</Text>
+              </TouchableOpacity>
             </View>
           )}
         />
@@ -203,3 +238,4 @@ const ContactsScreen = () => {
 };
 
 export default ContactsScreen;
+
