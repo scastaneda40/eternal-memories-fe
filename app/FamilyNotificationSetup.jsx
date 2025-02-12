@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, Button, Alert, Image } from "react-native";
+import { View, Text, FlatList, Button, Alert, Image, TouchableOpacity } from "react-native";
 import { Checkbox } from "react-native-paper";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { supabase } from "../constants/supabaseClient";
@@ -12,7 +12,6 @@ const FamilyNotificationSetup = () => {
   const { user } = useUser();
 
   const capsuleId = route?.params?.capsuleId;
-  console.log("Received capsule ID from route:", capsuleId);
   const [capsuleDetails, setCapsuleDetails] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
@@ -32,97 +31,42 @@ const FamilyNotificationSetup = () => {
 
   const fetchCapsuleDetails = async () => {
     try {
-      console.log("Fetching capsule details for ID:", capsuleId);
-  
-      const { data: capsule, error: capsuleError } = await supabase
+      const { data: capsule, error } = await supabase
         .from("capsules")
         .select("*")
         .eq("id", capsuleId)
         .single();
-  
-      if (capsuleError) {
-        console.error("Error fetching capsule details:", capsuleError.message);
-        Alert.alert("Error", "Failed to fetch capsule details.");
-        return;
-      }
-  
-      console.log("Fetched capsule details:", capsule);
-  
-      const { data: capsuleMedia, error: mediaError } = await supabase
-        .from("capsule_media")
-        .select(`
-          media_id,
-          media_bank (
-            id,
-            url,
-            name,
-            media_type
-          )
-        `)
-        .eq("capsule_id", capsuleId);
-  
-      if (mediaError) {
-        console.error("Error fetching capsule media:", mediaError.message);
-        Alert.alert("Error", "Failed to fetch capsule media.");
-        return;
-      }
-  
-      console.log("Raw capsule media:", capsuleMedia);
-  
-      const mediaFiles =
-        capsuleMedia?.map((entry) => entry.media_bank).filter(Boolean) || [];
-      console.log("Parsed media files:", mediaFiles);
-  
-      const imageMedia = mediaFiles.find((media) => media.media_type === "photo");
-      const videoMedia = mediaFiles.find((media) => media.media_type === "video");
-  
-      const imageUrl = imageMedia?.url || null;
-      const videoUrl = videoMedia?.url || null;
-  
-      console.log("Extracted image media:", imageMedia);
-      console.log("Extracted video media:", videoMedia);
-      console.log("Extracted imageUrl:", imageUrl);
-      console.log("Extracted videoUrl:", videoUrl);
-  
-      const capsuleDetailsWithMedia = { ...capsule, imageUrl, videoUrl, mediaFiles };
-      console.log("Capsule details with media:", capsuleDetailsWithMedia);
-  
-      setCapsuleDetails(capsuleDetailsWithMedia);
+
+      if (error) throw error;
+
+      setCapsuleDetails(capsule);
     } catch (error) {
-      console.error("Unexpected error fetching capsule details:", error.message);
-      Alert.alert("Error", "Something went wrong.");
+      Alert.alert("Error", "Failed to fetch capsule details.");
     }
   };
-  
 
   const fetchContacts = async () => {
     try {
       const userId = user?.id;
-      console.log("Fetching contacts for user ID:", userId);
-
-      if (!userId) {
-        Alert.alert("Error", "User ID is not available.");
-        return;
-      }
-
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
         .eq("user_id", userId);
 
-      if (error) {
-        console.error("Error fetching contacts:", error.message);
-        Alert.alert("Error", "Failed to fetch contacts.");
-        return;
-      }
+      if (error) throw error;
 
-      console.log("Fetched contacts:", data);
       setContacts(data);
     } catch (error) {
-      console.error("Unexpected error fetching contacts:", error.message);
-      Alert.alert("Error", "Something went wrong.");
+      Alert.alert("Error", "Failed to fetch contacts.");
     }
   };
+
+  // Dynamically filtered contacts based on preferences
+  const filteredContacts = contacts.filter((contact) => {
+    if (filterByEmail && !contact.email) return false;
+    if (filterByText && !contact.phone) return false;
+    return true;
+  });
 
   const handleConfirm = async () => {
     if (!capsuleDetails) {
@@ -200,82 +144,171 @@ const FamilyNotificationSetup = () => {
       </View>
     );
   }
+  
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
-        Notification Preferences
-      </Text>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}
-      >
-        <Checkbox
-          status={filterByEmail ? "checked" : "unchecked"}
-          onPress={() => setFilterByEmail(!filterByEmail)}
-          color="#008080"
-        />
-        <Text style={{ marginRight: 20 }}>Email</Text>
-        <Checkbox
-          status={filterByText ? "checked" : "unchecked"}
-          onPress={() => setFilterByText(!filterByText)}
-          color="#008080"
-        />
-        <Text>Text</Text>
-      </View>
+  {/* Filters */}
+  <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
+    Notification Preferences
+  </Text>
 
-      <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
-        Notify Family Members
-      </Text>
-      <FlatList
-        data={contacts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 10,
-              borderWidth: 1,
-              borderColor: "#ddd",
-              borderRadius: 5,
-              padding: 10,
-            }}
-          >
-            <Checkbox
-              status={
-                selectedContacts.includes(item.id) ? "checked" : "unchecked"
-              }
-              onPress={() => {
-                if (selectedContacts.includes(item.id)) {
-                  setSelectedContacts((prev) =>
-                    prev.filter((id) => id !== item.id)
-                  );
-                } else {
-                  setSelectedContacts((prev) => [...prev, item.id]);
-                }
-              }}
-              color="#008080"
-            />
-            <Text style={{ marginLeft: 10, fontSize: 16 }}>{item.name}</Text>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text
-            style={{
-              textAlign: "center",
-              marginTop: 20,
-              fontSize: 16,
-              color: "gray",
-            }}
-          >
-            No contacts available.
-          </Text>
-        }
+  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+    {/* Email Filter with Circle Outline */}
+    <View
+      style={{
+        width: 36, // Circle size
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: "#008080", // Outline color
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10,
+        backgroundColor: filterByEmail ? "#008080" : "transparent", // Fill circle when checked
+      }}
+    >
+      <Checkbox
+        status={filterByEmail ? "checked" : "unchecked"}
+        onPress={() => setFilterByEmail(!filterByEmail)}
+        color={filterByEmail ? "#ffffff" : "#008080"}
+        uncheckedColor="#008080"
+        style={{
+          alignSelf: "center", // Ensure it's centered horizontally
+        }}
       />
-      <Button title="Confirm" color="#008080" onPress={handleConfirm} />
     </View>
-  );
+    <Text>Email</Text>
+  </View>
+
+  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+    {/* Text Filter with Circle Outline */}
+    <View
+      style={{
+        width: 36, // Circle size
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: "#008080",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10,
+        backgroundColor: filterByText ? "#008080" : "transparent", // Fill circle when checked
+      }}
+    >
+      <Checkbox
+        status={filterByText ? "checked" : "unchecked"}
+        onPress={() => setFilterByText(!filterByText)}
+        color={filterByText ? "#ffffff" : "#008080"}
+        uncheckedColor="#008080"
+        style={{
+          alignSelf: "center", // Ensure it's centered horizontally
+        }}
+      />
+    </View>
+    <Text>Text</Text>
+  </View>
+
+  {/* Contacts List */}
+  <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
+    Notify Family Members
+  </Text>
+  <FlatList
+    data={filteredContacts}
+    keyExtractor={(item) => item.id.toString()}
+    renderItem={({ item }) => (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: 10,
+          borderWidth: 1,
+          borderColor: "#ddd",
+          borderRadius: 5,
+          padding: 10,
+        }}
+      >
+        {/* Contact Checkbox with Circle Outline */}
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            borderWidth: 2,
+            borderColor: "#008080",
+            justifyContent: "center",
+            alignItems: "center",
+            marginRight: 10,
+            backgroundColor: selectedContacts.includes(item.id) ? "#008080" : "transparent",
+          }}
+        >
+          <Checkbox
+            status={selectedContacts.includes(item.id) ? "checked" : "unchecked"}
+            onPress={() => {
+              setSelectedContacts((prev) =>
+                prev.includes(item.id)
+                  ? prev.filter((id) => id !== item.id)
+                  : [...prev, item.id]
+              );
+            }}
+            color={selectedContacts.includes(item.id) ? "#ffffff" : "#008080"}
+            uncheckedColor="#008080"
+            style={{
+              alignSelf: "center", // Ensure it's centered horizontally
+            }}
+          />
+        </View>
+        <Text style={{ marginLeft: 10 }}>{item.name}</Text>
+      </View>
+    )}
+    ListEmptyComponent={<Text>No contacts available.</Text>}
+  />
+
+  {/* Confirm Button */}
+  <Button title="Confirm" color="#008080" onPress={handleConfirm} />
+</View>
+    );  
 };
+
+// const styles = {
+//   checkboxRow: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginBottom: 20,
+//   },
+//   circle: {
+//     width: 24,
+//     height: 24,
+//     borderRadius: 12,
+//     borderWidth: 2,
+//     borderColor: "#008080",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginRight: 10,
+//   },
+//   checkboxLabel: {
+//     fontSize: 16,
+//   },
+//   contactRow: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginBottom: 10,
+//     borderWidth: 1,
+//     borderColor: "#ddd",
+//     borderRadius: 5,
+//     padding: 10,
+//   },
+//   contactName: {
+//     marginLeft: 10,
+//     fontSize: 16,
+//   },
+//   emptyText: {
+//     textAlign: "center",
+//     marginTop: 20,
+//     fontSize: 16,
+//     color: "gray",
+//   },
+// };
 
 export default FamilyNotificationSetup;
 

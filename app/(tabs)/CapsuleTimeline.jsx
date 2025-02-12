@@ -150,7 +150,7 @@ const CapsuleTimeline = () => {
           <Text
             style={[styles.toggleText, view === "upcoming" && styles.activeText]}
           >
-            Upcoming Capsules
+            Upcoming 
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -163,7 +163,7 @@ const CapsuleTimeline = () => {
           <Text
             style={[styles.toggleText, view === "released" && styles.activeText]}
           >
-            Released Capsules
+            Released 
           </Text>
         </TouchableOpacity>
       </View>
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginHorizontal: 5,
   },
-  activeButton: { backgroundColor: "#007AFF" },
+  activeButton: { backgroundColor: "#19747E" },
   toggleText: { fontSize: 16, color: "#555" },
   activeText: { color: "#fff", fontWeight: "bold" },
   capsuleItem: {
