@@ -86,7 +86,7 @@ const MemoryChat = ({ route }) => {
         setIsTyping(true);
 
         try {
-            const response = await fetch("http://192.168.1.116:5000/chat", {
+            const response = await fetch("http://192.168.1.87:5000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

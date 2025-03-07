@@ -26,20 +26,8 @@ const SettingsPage = () => {
   const { user, setUser } = useUser();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user?.id)
-        .single();
-  
-      if (!error && data) {
-        setUser(data);
-      }
-    };
-  
     fetchUser();
-  }, [user?.avatar_url]);
+  }, [user?.id, user?.avatar_url]); // 🔥 Now updates when avatar changes
   
 
   const openImagePicker = async () => {
@@ -61,41 +49,54 @@ const SettingsPage = () => {
     try {
       setIsUploading(true);
   
-      // Upload image to Supabase Storage
-      const fileName = `avatars/${user.id}-${Date.now()}.jpg`;
-      const { data, error } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, {
-          uri: selectedImage,
-          type: "image/jpeg",
-          name: fileName,
-        });
+      // Convert image URI to Blob
+      const response = await fetch(selectedImage);
+      const blob = await response.blob();
   
-      if (error) throw error;
+      // Prepare FormData for backend
+      const formData = new FormData();
+      formData.append("file", {
+        uri: selectedImage,
+        name: `avatar-${user.id}.jpg`,
+        type: "image/jpeg",
+      });
+      formData.append("userId", user.id);
   
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
+      console.log("Uploading image with FormData:", formData);
   
-      const avatarUrl = publicUrlData.publicUrl;
-  
-      // Update user in the database
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ avatar_url: avatarUrl })
-        .eq("id", user.id);
-  
-      if (updateError) throw updateError;
-  
-      // Update local user context
-      setUser((prevUser) => {
-        const updatedUser = { ...prevUser, avatar_url: avatarUrl };
-        console.log("Updated user context:", updatedUser);
-        return updatedUser;
+      const res = await fetch("http://localhost:5000/api/avatar-upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${user.accessToken}`,
+        },
       });
   
-      setModalVisible(false);
+      const text = await res.text();
+      console.log("Raw Response:", text);
+  
+      try {
+        const data = JSON.parse(text);
+        console.log("Parsed Data:", data);
+  
+        if (!res.ok) throw new Error(data.message || "Upload failed");
+  
+        if (!data.avatarUrl) throw new Error("No avatarUrl in response");
+  
+        // ✅ Fetch the latest user data from Supabase immediately
+        await fetchUser(); 
+  
+        // ✅ Update state with the new avatar URL
+        setUser((prevUser) => ({
+          ...prevUser,
+          avatar_url: data.avatarUrl,
+        }));
+  
+        setModalVisible(false);
+      } catch (error) {
+        console.error("Error parsing JSON:", error, text);
+      }
     } catch (error) {
       console.error("Error uploading image:", error);
     } finally {
@@ -103,7 +104,53 @@ const SettingsPage = () => {
     }
   };
   
+  
+  // ✅ Move fetchUser outside to use it globally
+  const fetchUser = async () => {
+    console.log("🔍 Fetching user from Supabase for ID:", user?.id);
+  
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user?.id)
+      .maybeSingle(); // Prevents multiple row error
+  
+    console.log("📊 Supabase Response:", { data, error });
+  
+    if (error) {
+      console.error("❌ Error fetching user:", error);
+      return;
+    }
+  
+    if (!data) {
+      console.warn("⚠️ No user found for ID:", user.id);
+      return;
+    }
+  
+    console.log("✅ User Data Found:", data);
+    
+    setUser((prevUser) => ({
+      ...prevUser,
+      avatar_url: data.avatar_url,
+    }));
+  };
+  
+  
+
+  
   const toggleSwitch = () => setNotificationEnabled(!isNotificationEnabled);
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      console.log("✅ User successfully logged out.");
+    } catch (error) {
+      console.error("❌ Logout failed:", error.message);
+    }
+  };
+  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -112,11 +159,18 @@ const SettingsPage = () => {
       <View style={styles.profileSection}>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
         <Image
+  key={user?.avatar_url} // Forces React to reload image when URL changes
   source={{
-    uri: user?.avatar_url ? `${user.avatar_url}?timestamp=${new Date().getTime()}` : "https://via.placeholder.com/150",
+    uri: user?.avatar_url
+      ? `${user.avatar_url}?timestamp=${new Date().getTime()}`
+      : "https://via.placeholder.com/150",
   }}
   style={styles.profileImage}
+  onLoad={() => console.log("✅ Avatar loaded successfully!")}
+  onError={(e) => console.error("❌ Error loading avatar", e.nativeEvent)}
 />
+
+
 
         </TouchableOpacity>
         <Text style={styles.profileName}>{user?.name || "Your Name"}</Text>
@@ -158,7 +212,7 @@ const SettingsPage = () => {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 

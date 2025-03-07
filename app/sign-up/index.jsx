@@ -1,77 +1,58 @@
-import * as React from 'react';
-import { TextInput, TouchableOpacity, View, SafeAreaView, StyleSheet, Text } from 'react-native';
-import { useSignUp } from '@clerk/clerk-expo';
+import React, { useState } from 'react';
+import {
+  TextInput,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '../../constants/supabaseClient';
 
 export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
 
-  const [emailAddress, setEmailAddress] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [pendingVerification, setPendingVerification] = React.useState(false);
-  const [code, setCode] = React.useState('');
-  const [errors, setErrors] = React.useState({ email: '', password: '' });
+  const [emailAddress, setEmailAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = (email) => {
-    if (!email.includes('@')) {
-      setErrors((prev) => ({ ...prev, email: 'Invalid email address.' }));
-    } else {
-      setErrors((prev) => ({ ...prev, email: '' }));
-    }
+    setErrors((prev) => ({
+      ...prev,
+      email: email.includes('@') ? '' : 'Invalid email address.',
+    }));
   };
 
-  const validatePassword = async (password) => {
-    if (password.length < 8) {
-      setErrors((prev) => ({ ...prev, password: 'Password must be at least 8 characters.' }));
-    } else {
-      try {
-        // Simulate sign-up attempt to detect pwned passwords
-        await signUp.create({ password });
-        setErrors((prev) => ({ ...prev, password: '' })); // Clear error if valid
-      } catch (error) {
-        const pwnedError = error?.errors?.find((err) => err.code === 'form_password_pwned');
-        if (pwnedError) {
-          setErrors((prev) => ({
-            ...prev,
-            password: 'Password found in a data breach. Please use a different password.',
-          }));
-        } else {
-          setErrors((prev) => ({ ...prev, password: '' }));
-        }
-      }
-    }
+  const validatePassword = (password) => {
+    setErrors((prev) => ({
+      ...prev,
+      password:
+        password.length >= 8 ? '' : 'Password must be at least 8 characters.',
+    }));
   };
 
   const onSignUpPress = async () => {
-    if (!isLoaded || errors.email || errors.password) {
-      return;
-    }
+    if (errors.email || errors.password || isLoading) return;
+    setIsLoading(true);
 
     try {
-      await signUp.create({ emailAddress, password });
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setPendingVerification(true);
-    } catch (error) {
-      console.error(JSON.stringify(error, null, 2));
-    }
-  };
+      const { data, error } = await supabase.auth.signUp({
+        email: emailAddress,
+        password: password,
+      });
 
-  const onPressVerify = async () => {
-    if (!isLoaded) {
-      return;
-    }
-
-    try {
-      const completeSignUp = await signUp.attemptEmailAddressVerification({ code });
-      if (completeSignUp.status === 'complete') {
-        await setActive({ session: completeSignUp.createdSessionId });
-        router.replace('/');
+      if (error) {
+        console.error('❌ Supabase Sign-Up Error:', error.message);
       } else {
-        console.error(JSON.stringify(completeSignUp, null, 2));
+        console.log('✅ Supabase Sign-Up Success:', data);
+        router.replace('/'); // Redirect user after sign-up
       }
     } catch (error) {
-      console.error(JSON.stringify(error, null, 2));
+      console.error('❌ Sign-Up Error:', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,58 +60,50 @@ export default function SignUpScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.welcomeHeader}>Welcome to Eternal Memories</Text>
       <Text style={styles.description}>
-        Relive and preserve your cherished moments. Create your account to begin your journey.
+        Relive and preserve your cherished moments. Create your account to begin
+        your journey.
       </Text>
-      {!pendingVerification && (
-        <View style={styles.formContainer}>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            autoCapitalize="none"
-            value={emailAddress}
-            placeholder="Email Address"
-            placeholderTextColor="#aaa"
-            onChangeText={(email) => {
-              setEmailAddress(email);
-              validateEmail(email);
-            }}
-          />
-          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
-            value={password}
-            placeholder="Password"
-            placeholderTextColor="#aaa"
-            secureTextEntry={true}
-            onChangeText={(password) => {
-              setPassword(password);
-              validatePassword(password);
-            }}
-          />
-          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
-          <TouchableOpacity
-            style={[styles.button, (errors.email || errors.password) && styles.buttonDisabled]}
-            onPress={onSignUpPress}
-            disabled={!!errors.email || !!errors.password}
-          >
-            <Text style={styles.buttonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {pendingVerification && (
-        <View style={styles.formContainer}>
-          <Text style={styles.instructionText}>Enter the verification code sent to your email:</Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            placeholder="Verification Code"
-            placeholderTextColor="#aaa"
-            onChangeText={(code) => setCode(code)}
-          />
-          <TouchableOpacity style={styles.button} onPress={onPressVerify}>
-            <Text style={styles.buttonText}>Verify Email</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.formContainer}>
+        <TextInput
+          style={[styles.input, errors.email && styles.inputError]}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="Email Address"
+          placeholderTextColor="#aaa"
+          onChangeText={(email) => {
+            setEmailAddress(email);
+            validateEmail(email);
+          }}
+        />
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <TextInput
+          style={[styles.input, errors.password && styles.inputError]}
+          value={password}
+          placeholder="Password"
+          placeholderTextColor="#aaa"
+          secureTextEntry
+          onChangeText={(password) => {
+            setPassword(password);
+            validatePassword(password);
+          }}
+        />
+        {errors.password && (
+          <Text style={styles.errorText}>{errors.password}</Text>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (errors.email || errors.password || isLoading) &&
+              styles.buttonDisabled,
+          ]}
+          onPress={onSignUpPress}
+          disabled={!!errors.email || !!errors.password || isLoading}
+        >
+          <Text style={styles.buttonText}>
+            {isLoading ? 'Signing Up...' : 'Sign Up'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -198,12 +171,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-  },
-  instructionText: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

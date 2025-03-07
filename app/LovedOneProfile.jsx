@@ -38,7 +38,7 @@ const LovedOneProfile = () => {
     console.log("Payload being sent to server:", profile);
 
     try {
-      const response = await fetch("http://192.168.1.116:5000/profile", {
+      const response = await fetch("http://192.168.1.87:5000/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

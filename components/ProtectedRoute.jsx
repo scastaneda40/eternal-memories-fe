@@ -1,21 +1,35 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, SafeAreaView, StyleSheet } from "react-native";
-import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
+import { supabase } from "../constants/supabaseClient";
 
 const PRIMARY_TEAL = "#19747E";
 
 export default function ProtectedRoute({ children }) {
-  const { isLoaded, userId } = useAuth();
   const router = useRouter();
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    if (isLoaded && !userId) {
+    const checkUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUser(data.user);
+      }
+      setIsAuthLoaded(true);
+    };
+
+    checkUser();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthLoaded && !user) {
+      console.log("🔹 No active Supabase session, redirecting to sign-in.");
       router.replace("/sign-in");
     }
-  }, [isLoaded, userId, router]);
+  }, [isAuthLoaded, user, router]);
 
-  if (!isLoaded) {
+  if (!isAuthLoaded) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
         <ActivityIndicator size="large" color={PRIMARY_TEAL} />
@@ -23,15 +37,7 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!userId) {
-    return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.text}>Redirecting to Sign In...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  return children;
+  return user ? children : null;
 }
 
 const styles = StyleSheet.create({
@@ -46,4 +52,3 @@ const styles = StyleSheet.create({
     color: PRIMARY_TEAL,
   },
 });
-

@@ -106,7 +106,7 @@ const FamilyNotificationSetup = () => {
       console.log("Payload before sending:", payload);
 
       const response = await fetch(
-        "http://192.168.1.116:5000/api/send-notification",
+        "http://192.168.1.87:5000/api/send-notification",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
