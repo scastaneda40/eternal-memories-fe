@@ -22,6 +22,7 @@ import Icon from 'react-native-vector-icons/Feather'; // Example
 const Dashboard = () => {
   const navigation = useNavigation();
   const [highlightedMemory, setHighlightedMemory] = useState(null);
+  const [avatar, setAvatar] = useState(null);
   const insets = useSafeAreaInsets();
 
   const { profile, setProfile } = useProfile();
@@ -30,37 +31,74 @@ const Dashboard = () => {
   const { width, height } = Dimensions.get('window');
 
   useEffect(() => {
+    if (profile?.avatar_url) {
+      setAvatar(`${profile.avatar_url}?timestamp=${new Date().getTime()}`);
+    }
+  }, [profile?.avatar_url]);
+
+  useEffect(() => {
     const fetchProfile = async () => {
-      console.log('Fetching profiles...');
+      console.log('Fetching profile for user:', user?.id);
+
+      if (!user?.id) return;
+
       try {
         const { data: profiles, error } = await supabase
           .from('profile')
           .select('*')
-          .eq('user_id', user?.id);
+          .eq('user_id', user.id);
 
         if (error) {
-          console.error('Error fetching profiles:', error.message);
+          console.error('Error fetching profile:', error.message);
           return;
         }
 
         if (profiles && profiles.length > 0) {
           console.log('Profiles found:', profiles);
-          // Set the first profile if none is set in the context
-          if (!profile?.id) {
-            setProfile(profiles[0]); // Update profile context
-          }
+          const selectedProfile = profiles[0]; // ✅ Pick the first profile
+          setProfile(selectedProfile); // ✅ Update profile context
         } else {
           console.log('No profiles found for this user.');
         }
       } catch (err) {
-        console.error('Unexpected error fetching profiles:', err);
+        console.error('Unexpected error fetching profile:', err);
       }
     };
 
-    if (user?.id && !profile?.id) {
-      fetchProfile();
-    }
-  }, [user?.id, profile?.id, setProfile]);
+    fetchProfile(); // ✅ Fetch profile on component mount
+  }, []); // ✅ Runs only once when the component mounts
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      console.log('Fetching user details for:', user?.id);
+
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('users') // Make sure this is the correct table for auth users
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single(); // Ensures we only get one user record
+
+        if (error) {
+          console.error('Error fetching user avatar:', error.message);
+          return;
+        }
+
+        if (data?.avatar_url) {
+          console.log('User avatar found:', data.avatar_url);
+          setAvatar(`${data.avatar_url}?timestamp=${new Date().getTime()}`);
+        } else {
+          console.log('No avatar found for this user.');
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching user avatar:', err);
+      }
+    };
+
+    fetchUser(); // Fetch user details on component mount
+  }, [user?.id]); // Re-run if user ID changes
 
   useEffect(() => {
     const fetchRandomImage = async () => {
@@ -127,12 +165,10 @@ const Dashboard = () => {
           style={styles.profileIcon}
           onPress={() => navigation.navigate('SettingsPage')}
         >
-          {console.log('🧐 Dashboard Avatar URL:', user?.avatar_url)}
-          {user?.avatar_url ? (
+          {console.log('🧐 Dashboard Avatar URL:', avatar)}
+          {avatar ? (
             <Image
-              source={{
-                uri: `${user.avatar_url}?timestamp=${new Date().getTime()}`,
-              }}
+              source={{ uri: avatar }}
               style={{
                 width: 50,
                 height: 50,

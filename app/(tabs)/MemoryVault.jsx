@@ -76,7 +76,7 @@ const MemoryVault = () => {
 
       try {
         const response = await fetch(
-          `http://192.168.1.95:5000/api/memories?profile_id=${selectedProfile}`
+          `http://192.168.1.87:5000/api/memories?profile_id=${selectedProfile}`
         );
 
         if (!response.ok) {

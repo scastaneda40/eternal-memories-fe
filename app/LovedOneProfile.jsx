@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import { View, TextInput, Button, StyleSheet, Alert } from "react-native";
-import { useProfile } from "../constants/ProfileContext";
-import { useUser } from "../constants/UserContext";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-
+import React, { useState } from 'react';
+import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { useProfile } from '../constants/ProfileContext';
+import { useUser } from '../constants/UserContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 const LovedOneProfile = () => {
   const { setProfile } = useProfile();
@@ -12,17 +11,16 @@ const LovedOneProfile = () => {
   const userId = user?.id; // Extract userId from user
   const navigation = useNavigation(); // Get navigation object
 
-
-  const [name, setName] = useState("");
-  const [relationship, setRelationship] = useState(""); // New field
-  const [traits, setTraits] = useState("");
-  const [sayings, setSayings] = useState("");
-  const [memories, setMemories] = useState("");
+  const [name, setName] = useState('');
+  const [relationship, setRelationship] = useState(''); // New field
+  const [traits, setTraits] = useState('');
+  const [sayings, setSayings] = useState('');
+  const [memories, setMemories] = useState('');
 
   const handleSave = async () => {
     if (!userId) {
-      console.error("User ID is missing from context.");
-      Alert.alert("Error", "You must be logged in to save a profile.");
+      console.error('User ID is missing from context.');
+      Alert.alert('Error', 'You must be logged in to save a profile.');
       return;
     }
 
@@ -35,40 +33,39 @@ const LovedOneProfile = () => {
       user_id: userId, // Ensure this is from useUser context
     };
 
-    console.log("Payload being sent to server:", profile);
+    console.log('Payload being sent to server:', profile);
 
     try {
-      const response = await fetch("http://192.168.1.87:5000/profile", {
-        method: "POST",
+      const response = await fetch('http://192.168.1.87:5000/profile', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(profile),
       });
 
-      console.log("Server response status:", response.status);
+      console.log('Server response status:', response.status);
 
       if (!response.ok) {
         const errorResponse = await response.json();
-        console.error("Error response from server:", errorResponse);
-        throw new Error(errorResponse.message || "Failed to save profile.");
+        console.error('Error response from server:', errorResponse);
+        throw new Error(errorResponse.message || 'Failed to save profile.');
       }
 
       const { profile: savedProfile } = await response.json();
-      console.log("Saved profile received from server:", savedProfile);
+      console.log('Saved profile received from server:', savedProfile);
 
       setProfile(savedProfile);
 
-      Alert.alert("Success", "Profile saved successfully!", [
+      Alert.alert('Success', 'Profile saved successfully!', [
         {
-          text: "OK",
-          onPress: () =>
-            navigation.navigate("(tabs)"),
+          text: 'OK',
+          onPress: () => navigation.navigate('(tabs)'),
         },
       ]);
     } catch (error) {
-      console.error("Error saving profile:", error);
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
     }
   };
 
@@ -116,7 +113,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: '#ddd',
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
@@ -124,8 +121,3 @@ const styles = StyleSheet.create({
 });
 
 export default LovedOneProfile;
-
-
-
-
-
