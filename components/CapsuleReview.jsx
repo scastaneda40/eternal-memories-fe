@@ -16,6 +16,8 @@ const CapsuleReview = ({ route, navigation }) => {
   const { capsuleDetails, mediaFiles, isEditing = false } = route.params || {};
   const [loading, setLoading] = useState(false);
 
+  console.log('🔍 Checking mediaFiles:', mediaFiles);
+
   if (!capsuleDetails) {
     return (
       <View style={styles.errorContainer}>
@@ -33,7 +35,7 @@ const CapsuleReview = ({ route, navigation }) => {
         capsuleId = await createCapsule();
       }
 
-      // Insert media into the database
+      // Insert new media into the database
       const newMedia = mediaFiles.filter((media) => media.isNew);
       const insertedMedia = [];
 
@@ -52,7 +54,7 @@ const CapsuleReview = ({ route, navigation }) => {
           .select();
 
         if (error) {
-          console.error('Error inserting media:', error);
+          console.error('❌ Error inserting media:', error);
           throw error;
         }
 
@@ -65,15 +67,15 @@ const CapsuleReview = ({ route, navigation }) => {
           .from('capsule_media')
           .insert([{ capsule_id: capsuleId, media_id: media.id }]);
         if (error) {
-          console.error('Error inserting into join table:', error);
+          console.error('❌ Error inserting into join table:', error);
           throw error;
         }
       }
 
-      Alert.alert('Success', 'Capsule created successfully!');
+      Alert.alert('✅ Success', 'Capsule created successfully!');
       navigation.navigate('CapsuleTimeline');
     } catch (error) {
-      console.error('Error saving capsule:', error);
+      console.error('❌ Error saving capsule:', error);
       Alert.alert('Error', 'Failed to save capsule.');
     } finally {
       setLoading(false);
@@ -97,24 +99,10 @@ const CapsuleReview = ({ route, navigation }) => {
 
     if (error) throw error;
     if (!data || !data[0]) {
-      console.error('Capsule creation failed:', data);
+      console.error('❌ Capsule creation failed:', data);
       throw new Error('Failed to create capsule.');
     }
     return data[0].id; // Return the created capsule ID
-  };
-
-  const updateCapsule = async () => {
-    // Update logic for existing capsules
-    const { error } = await supabase
-      .from('capsules')
-      .update({
-        title: capsuleDetails.title,
-        description: capsuleDetails.description,
-        release_date: capsuleDetails.release_date,
-      })
-      .eq('id', capsuleDetails.id);
-    if (error) throw error;
-    console.log('Capsule updated successfully');
   };
 
   return (
@@ -134,30 +122,55 @@ const CapsuleReview = ({ route, navigation }) => {
         </Text>
       </View>
 
+      {/* 🔹 Media Preview */}
       <View style={styles.mediaContainer}>
         <Text style={styles.sectionTitle}>Media Preview</Text>
-        <FlatList
-          horizontal
-          data={mediaFiles}
-          keyExtractor={(item, index) => `${item.id || item.uri}-${index}`}
-          renderItem={({ item }) => (
-            <View style={styles.mediaItem}>
-              {item.type === 'image' ? (
-                <Image
-                  source={{ uri: item.url || item.uri }}
-                  style={styles.mediaPreview}
-                />
-              ) : (
-                <Video
-                  source={{ uri: item.url || item.uri }}
-                  style={styles.mediaPreview}
-                  useNativeControls
-                  resizeMode="cover"
-                />
-              )}
-            </View>
-          )}
-        />
+        {mediaFiles.length === 0 ? (
+          <Text style={styles.noMediaText}>No media available</Text>
+        ) : (
+          <FlatList
+            horizontal
+            data={mediaFiles}
+            keyExtractor={(item, index) => `${item.id || item.uri}-${index}`}
+            style={{ height: 200 }} // ✅ Ensure FlatList has space
+            renderItem={({ item }) => {
+              console.log('🔹 Rendering Item:', item);
+
+              if (!item || !item.uri) {
+                console.warn('🚨 Skipping invalid item:', item);
+                return null;
+              }
+
+              const isVideo =
+                item.media_type === 'video' ||
+                item.uri?.endsWith('.mp4') ||
+                item.uri?.endsWith('.mov');
+
+              return (
+                <View style={styles.mediaItem}>
+                  {isVideo ? (
+                    <Video
+                      source={{ uri: item.uri }}
+                      style={[
+                        styles.mediaPreview,
+                        { backgroundColor: 'black', width: 200, height: 200 },
+                      ]}
+                      useNativeControls
+                      resizeMode="cover"
+                      shouldPlay={false}
+                      isLooping={false}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.mediaPreview}
+                    />
+                  )}
+                </View>
+              );
+            }}
+          />
+        )}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -180,6 +193,7 @@ const styles = StyleSheet.create({
   mediaContainer: { marginBottom: 20 },
   mediaItem: { marginRight: 10 },
   mediaPreview: { width: 100, height: 100, borderRadius: 5 },
+  noMediaText: { fontSize: 16, fontStyle: 'italic', textAlign: 'center' },
   buttonContainer: { marginTop: 20 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

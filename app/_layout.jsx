@@ -35,7 +35,7 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="SettingsPage"
-              options={{ headerTitle: 'Account Settings' }}
+              options={{ headerTitle: 'Account Settings', headerTitle: '' }}
             />
             <Stack.Screen
               name="(tabs)"
@@ -69,6 +69,7 @@ export default function RootLayout() {
           </Stack>
         </ProfileProvider>
       </UserProvider>
+      <Toast />
     </SafeAreaProvider>
   );
 }

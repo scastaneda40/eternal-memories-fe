@@ -1,26 +1,32 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import MapView, { Marker } from "react-native-maps";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import React, { useLayoutEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 const VaultMap = () => {
   const route = useRoute();
-  console.log('duh vault route', route)
+  console.log('duh vault route', route);
   const navigation = useNavigation();
   const { memories = [] } = route.params || {}; // Safely access memories
 
-  console.log('route params vault map', route.params)
+  console.log('route params vault map', route.params);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: '', // Remove title to prevent extra space
+    });
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
       <MapView
         style={{ flex: 1 }}
         initialRegion={{
-            latitude: 39.8283, // Geographic center of the contiguous US
-            longitude: -98.5795, // Geographic center of the contiguous US
-            latitudeDelta: 25, // Reduced to zoom in closer
-            longitudeDelta: 35, // Reduced to zoom in closer
-          }}
+          latitude: 39.8283, // Geographic center of the contiguous US
+          longitude: -98.5795, // Geographic center of the contiguous US
+          latitudeDelta: 25, // Reduced to zoom in closer
+          longitudeDelta: 35, // Reduced to zoom in closer
+        }}
       >
         {memories
           .filter((memory) => memory.location?.coordinates) // Ensure location exists
@@ -30,9 +36,9 @@ const VaultMap = () => {
               <Marker
                 key={memory.id}
                 coordinate={{ latitude, longitude }}
-                title={memory.title || "Untitled Memory"}
-                description={memory.description || "No description provided"}
-                onPress={() => navigation.navigate("MemoryDetail", { memory })}
+                title={memory.title || 'Untitled Memory'}
+                description={memory.description || 'No description provided'}
+                onPress={() => navigation.navigate('MemoryDetail', { memory })}
               />
             );
           })}
@@ -44,10 +50,8 @@ const VaultMap = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
 });
 
 export default VaultMap;
-
-

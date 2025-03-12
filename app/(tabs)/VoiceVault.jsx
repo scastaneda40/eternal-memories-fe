@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const VoiceVault = () => {
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: '', // Remove title to prevent extra space
+    });
+  }, [navigation]);
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Coming Soon</Text>

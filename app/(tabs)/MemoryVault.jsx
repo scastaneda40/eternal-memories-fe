@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { useUser } from '../../constants/UserContext';
 import { useNavigation } from '@react-navigation/native';
 import { Video } from 'expo-av';
 import { useRoute } from '@react-navigation/native';
+import { FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const MemoryVault = () => {
   const [memories, setMemories] = useState([]);
@@ -24,6 +26,12 @@ const MemoryVault = () => {
   const route = useRoute();
 
   const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: '', // Remove title to prevent extra space
+    });
+  }, [navigation]);
 
   const userId = user?.id;
 
@@ -76,7 +84,7 @@ const MemoryVault = () => {
 
       try {
         const response = await fetch(
-          `http://192.168.1.87:5000/api/memories?profile_id=${selectedProfile}`
+          `http://192.168.1.73:5000/api/memories?profile_id=${selectedProfile}`
         );
 
         if (!response.ok) {
@@ -135,7 +143,17 @@ const MemoryVault = () => {
           navigation.navigate('VaultMap', { memories: memories || [] })
         }
       >
-        <Text style={styles.mapButtonText}>View Map</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <FontAwesome
+            name="globe"
+            size={20}
+            color="#fff"
+            style={{ marginRight: 8 }} // Increased space
+          />
+          <Text style={[styles.mapButtonText, { marginRight: 6 }]}>
+            View Map
+          </Text>
+        </View>
       </TouchableOpacity>
 
       <View style={styles.dropdownContainer}>
@@ -143,10 +161,23 @@ const MemoryVault = () => {
           style={styles.dropdownButton}
           onPress={() => setDropdownVisible(!dropdownVisible)}
         >
-          <Text style={styles.dropdownButtonText}>
-            {profiles.find((p) => p.id === selectedProfile)?.name ||
-              'Select Profile'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Profile Name */}
+            {selectedProfile && (
+              <FontAwesome
+                name="user-circle"
+                size={18}
+                color="#fff" // Change color if needed
+                style={{ marginRight: 8 }} // Space between text & icon
+              />
+            )}
+            <Text style={styles.dropdownButtonText}>
+              {profiles.find((p) => p.id === selectedProfile)?.name ||
+                'Select Profile'}
+            </Text>
+
+            {/* Show Icon Only When a Profile is Selected */}
+          </View>
         </TouchableOpacity>
 
         {dropdownVisible && (
@@ -178,25 +209,33 @@ const MemoryVault = () => {
               horizontal
               keyExtractor={(url, index) => `${item.id}-media-${index}`}
               showsHorizontalScrollIndicator={true}
-              renderItem={({ item: mediaUrl }) =>
-                mediaUrl.endsWith('.mp4') || mediaUrl.endsWith('.mov') ? (
-                  <Video
-                    source={{ uri: mediaUrl }}
-                    style={{ width: 300, height: 200, borderRadius: 10 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Image
-                    source={{ uri: mediaUrl }}
-                    style={{
-                      width: 300,
-                      height: 200,
-                      borderRadius: 10,
-                      marginRight: 10,
-                    }}
-                  />
-                )
-              }
+              contentContainerStyle={{ paddingHorizontal: 10 }} // Ensures even spacing
+              renderItem={({ item: mediaUrl }) => (
+                <View style={{ marginHorizontal: 5 }}>
+                  {' '}
+                  {/* Ensures even spacing */}
+                  {mediaUrl.endsWith('.mp4') || mediaUrl.endsWith('.mov') ? (
+                    <Video
+                      source={{ uri: mediaUrl }}
+                      style={{
+                        width: 300,
+                        height: 200,
+                        borderRadius: 10,
+                      }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: mediaUrl }}
+                      style={{
+                        width: 300,
+                        height: 200,
+                        borderRadius: 10,
+                      }}
+                    />
+                  )}
+                </View>
+              )}
             />
             <TouchableOpacity
               onPress={() =>
@@ -215,7 +254,6 @@ const MemoryVault = () => {
             </Text>
           </View>
         )}
-        contentContainerStyle={styles.listContent}
       />
     </View>
   );

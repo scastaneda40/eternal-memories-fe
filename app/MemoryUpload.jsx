@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   TextInput,
@@ -22,11 +22,22 @@ import { useNavigation } from '@react-navigation/native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { supabase } from '../constants/supabaseClient';
 import { Video } from 'expo-av';
+import { Ionicons } from '@expo/vector-icons';
+import AddMediaModal from '../components/AddMediaModal';
+import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons'; // or 'react-native-vector-icons/FontAwesome'
+import Constants from 'expo-constants';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBILRnNABNjR-C8w8GZYinp_uZBouZJHrc';
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig.extra.GOOGLE_MAPS_API_KEY;
 Geocoder.init(GOOGLE_MAPS_API_KEY);
 
 const MemoryUpload = () => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: '', // Removes the title
+    });
+  }, [navigation]);
+
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [isProfileDropdownVisible, setIsProfileDropdownVisible] =
     useState(false);
@@ -58,12 +69,22 @@ const MemoryUpload = () => {
   const [mediaBank, setMediaBank] = useState([]);
   const [isMediaBankModalVisible, setIsMediaBankModalVisible] = useState(false);
   const [isLoading, setLoading] = useState(false);
+  const [isMediaOptionsVisible, setMediaOptionsVisible] = useState(false);
+  const [mediaAdded, setMediaAdded] = useState(false);
+  const [isAddingMedia, setIsAddingMedia] = useState(false);
 
   const userId = user?.id;
 
   useEffect(() => {
     console.log('Current selected profile:', selectedProfile);
   }, [selectedProfile]);
+
+  useEffect(() => {
+    console.log(
+      '🔹 isMediaBankModalVisible changed to:',
+      isMediaBankModalVisible
+    );
+  }, [isMediaBankModalVisible]);
 
   useEffect(() => {
     if (!userId) return;
@@ -124,6 +145,8 @@ const MemoryUpload = () => {
   };
 
   useEffect(() => {
+    console.log('🔹 isMediaBankModalVisible:', isMediaBankModalVisible);
+
     if (isMediaBankModalVisible && userId) {
       fetchMediaBank();
     }
@@ -138,6 +161,33 @@ const MemoryUpload = () => {
       // text1: "Profile Selected",
       text1: `Current Profile: ${profile.name}`,
     });
+  };
+
+  const pickMedia = async () => {
+    // Request permission to access media library
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      alert('Sorry, we need media library permissions to make this work!');
+      return;
+    }
+
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // Allows images & videos
+      allowsMultipleSelection: true, // Multiple media selection
+      quality: 1,
+    });
+
+    // Handle selected media
+    if (!result.canceled) {
+      setMedia((prev) => [
+        ...prev,
+        ...result.assets.map((asset) => ({ uri: asset.uri })),
+      ]);
+
+      setIsAddingMedia(false); // ✅ Close modal after selection
+    }
   };
 
   const handleMapPress = (event) => {
@@ -271,7 +321,7 @@ const MemoryUpload = () => {
         });
       });
 
-      const response = await fetch('http://192.168.1.87:5000/upload', {
+      const response = await fetch('http://192.168.1.73:5000/upload', {
         method: 'POST',
         body: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -318,10 +368,18 @@ const MemoryUpload = () => {
             style={styles.selectedProfileButton}
             onPress={() => setDropdownVisible(!dropdownVisible)}
           >
-            <Text style={styles.selectedProfileButtonText}>
-              {profiles.find((p) => p.id === selectedProfile)?.name ||
-                'Select Profile'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesome
+                name="user-circle"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.selectedProfileButtonText}>
+                {profiles.find((p) => p.id === selectedProfile)?.name ||
+                  'Select Profile'}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {dropdownVisible ? (
@@ -346,53 +404,206 @@ const MemoryUpload = () => {
         </View>
 
         <Text style={styles.title}>Create a Memory</Text>
+        <Text style={{ fontSize: 16, marginVertical: 8 }}>Title</Text>
         <TextInput
           style={styles.input}
-          placeholder="Title"
+          placeholder="Enter title"
           value={title}
           onChangeText={setTitle}
         />
+        <Text style={{ fontSize: 16, marginVertical: 8 }}>Tags</Text>
         <TextInput
           style={styles.input}
-          placeholder="Tags (comma-separated)"
+          placeholder="Create tags (comma-separated)"
           value={tags}
           onChangeText={setTags}
         />
+        <Text style={{ fontSize: 16, marginVertical: 8 }}>Description</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Description"
+          style={[styles.input, styles.textArea, { marginBottom: 20 }]}
+          placeholder="Enter description"
           value={description}
           onChangeText={setDescription}
           multiline
         />
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton, styles.dateButton]}
-          onPress={() => setDatePickerVisibility(true)}
-        >
-          <Text style={styles.buttonText}>Select Date</Text>
-        </TouchableOpacity>
-        <Text style={styles.dateText}>{date.toDateString()}</Text>
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={(selectedDate) => {
-            setDate(selectedDate);
-            setDatePickerVisibility(false);
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginVertical: 8,
           }}
-          onCancel={() => setDatePickerVisibility(false)}
-        />
-        <TouchableOpacity
-          style={[styles.button, styles.neutralButton]}
-          onPress={() => setIsMediaBankModalVisible(true)}
         >
-          <Text style={styles.buttonText}>Select Media from Media Bank</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.neutralButton]}
-          onPress={pickImage}
-        >
-          <Text style={styles.buttonText}>Import Media</Text>
-        </TouchableOpacity>
+          {/* Release Date Label */}
+          <Text style={{ fontSize: 16, marginRight: 10 }}>Memory Date</Text>
+
+          <TouchableOpacity
+            onPress={() => setDatePickerVisibility(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderWidth: 1,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 5,
+              borderColor: '#ccc',
+              flex: 1, // Allows it to take up available space
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text style={{ fontSize: 16, color: '#333' }}>
+              {date.toDateString()}
+            </Text>
+            <Ionicons name="calendar-outline" size={20} color="#333" />
+          </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            onConfirm={(selectedDate) => {
+              setDate(selectedDate);
+              setDatePickerVisibility(false);
+            }}
+            onCancel={() => setDatePickerVisibility(false)}
+          />
+        </View>
+        <View style={{ flex: 1, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => setIsAddingMedia(true)}
+          >
+            <Text style={styles.buttonText}>Add Media</Text>
+          </TouchableOpacity>
+
+          {/* ADD MEDIA MODAL ADD MEDIA MODAL ADD MEDIA MODAL  */}
+
+          <Modal
+            visible={isAddingMedia}
+            animationType="slide"
+            transparent={true}
+          >
+            <SafeAreaView
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  width: '90%',
+                  backgroundColor: '#fff',
+                  padding: 20,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}
+                >
+                  Add Media
+                </Text>
+                {console.log('🔹 Rendering Modal:', isMediaBankModalVisible)}
+
+                {/* Import from Device */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#19747E',
+                    paddingVertical: 12,
+                    width: '100%',
+                    alignItems: 'center',
+                    borderRadius: 8,
+                    marginBottom: 10,
+                    flexDirection: 'row', // ✅ Aligns icon & text horizontally
+                    justifyContent: 'center', // ✅ Centers content
+                  }}
+                  onPress={pickMedia}
+                >
+                  <MaterialIcons
+                    name="folder-open"
+                    size={24}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={{ color: '#fff', fontSize: 16 }}>
+                    Import from Device
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#555',
+                    paddingVertical: 12,
+                    width: '100%',
+                    alignItems: 'center',
+                    borderRadius: 8,
+                    marginBottom: 10,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                  }}
+                  onPress={() => {
+                    console.log('🔹 Button Pressed: Attempting to open modal');
+                    setIsAddingMedia(false); // Close the Add Media modal
+                    setIsMediaBankModalVisible((prev) => {
+                      console.log(
+                        '🔹 isMediaBankModalVisible should be true now:',
+                        !prev
+                      );
+                      return true;
+                    });
+                  }}
+                >
+                  <MaterialIcons
+                    name="photo-library"
+                    size={24}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={{ color: '#fff', fontSize: 16 }}>
+                    Select from Media Bank
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Cancel Button */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#ddd',
+                    paddingVertical: 12,
+                    width: '100%',
+                    alignItems: 'center',
+                    borderRadius: 8,
+                  }}
+                  onPress={() => setIsAddingMedia(false)}
+                >
+                  <Text style={{ color: '#333', fontSize: 16 }}>❌ Close</Text>
+                </TouchableOpacity>
+              </View>
+              {mediaAdded && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 10,
+                    width: '90%',
+                    backgroundColor: 'green',
+                    padding: 10,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    justifyContent: 'center', // ✅ Center content
+                    alignSelf: 'center', // ✅ Center horizontally
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                    }}
+                  >
+                    ✅ Media Added Successfully!
+                  </Text>
+                </View>
+              )}
+            </SafeAreaView>
+          </Modal>
+        </View>
         {media.length > 0 && (
           <View style={styles.carouselContainer}>
             <Carousel
@@ -471,15 +682,34 @@ const MemoryUpload = () => {
           </View>
         )}
 
-        <Text style={styles.addressText}>
-          Selected Address: {manualAddress}
-        </Text>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton, styles.addressButton]}
-          onPress={() => setIsMapVisible(true)}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginVertical: 8,
+          }}
         >
-          <Text style={styles.buttonText}>Select Address</Text>
-        </TouchableOpacity>
+          <Text
+            style={[styles.addressText, { flex: 1 }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {manualAddress ? manualAddress : '📍 Location not set'}
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.primaryButton,
+              styles.addressButton,
+              { marginLeft: 10 },
+            ]}
+            onPress={() => setIsMapVisible(true)}
+          >
+            <Text style={styles.buttonText}>Select Location</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={[styles.button, styles.primaryButton, styles.uploadButton]}
           onPress={handleUpload}
@@ -537,7 +767,8 @@ const MemoryUpload = () => {
       <Modal
         visible={isMediaBankModalVisible}
         animationType="slide"
-        onRequestClose={() => setIsMediaBankModalVisible(false)}
+        transparent={true}
+        // onRequestClose={() => setIsMediaBankModalVisible(false)}
       >
         <SafeAreaView
           style={{
@@ -567,33 +798,38 @@ const MemoryUpload = () => {
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => {
                 const isVideo =
-                  item.url.endsWith('.mp4') || item.url.endsWith('.mov'); // Check if it's a video
+                  item.url.endsWith('.mp4') || item.url.endsWith('.mov');
+
+                // Check if this item is selected based on its ID
                 const isSelected = media.some(
-                  (mediaItem) => mediaItem.uri === item.url
-                ); // Check if selected
+                  (mediaItem) => mediaItem.id === item.id
+                );
 
                 return (
                   <TouchableOpacity
                     style={{
                       flex: 1,
                       margin: 5,
-                      aspectRatio: 1, // Ensures square thumbnails
-                      maxWidth: '30%', // Ensures consistent column size
+                      aspectRatio: 1,
+                      maxWidth: '30%',
                       borderRadius: 8,
                       overflow: 'hidden',
                       position: 'relative',
                       borderWidth: isSelected ? 2 : 0,
-                      borderColor: isSelected ? '#19747E' : 'transparent', // Highlight if selected
+                      borderColor: isSelected ? '#19747E' : 'transparent',
                     }}
                     onPress={() => {
                       if (isSelected) {
-                        // Deselect if already selected
+                        // Deselect by filtering out this item's ID
                         setMedia((prev) =>
-                          prev.filter((mediaItem) => mediaItem.uri !== item.url)
+                          prev.filter((mediaItem) => mediaItem.id !== item.id)
                         );
                       } else {
-                        // Add to selected items
-                        setMedia((prev) => [...prev, { uri: item.url }]);
+                        // Add the new media object, ensuring ID is included
+                        setMedia((prev) => [
+                          ...prev,
+                          { id: item.id, uri: item.url },
+                        ]);
                       }
                     }}
                   >
@@ -607,7 +843,7 @@ const MemoryUpload = () => {
                             resizeMode: 'cover',
                           }}
                           resizeMode="cover"
-                          shouldPlay={false} // Static preview
+                          shouldPlay={false}
                           useNativeControls={false}
                         />
                         <View
@@ -669,7 +905,7 @@ const MemoryUpload = () => {
                   </TouchableOpacity>
                 );
               }}
-              numColumns={3} // Display as a grid with 3 columns
+              numColumns={3}
               contentContainerStyle={{
                 paddingBottom: 20,
               }}
