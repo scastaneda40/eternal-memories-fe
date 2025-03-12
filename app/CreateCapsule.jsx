@@ -23,8 +23,13 @@ import { useNavigation } from '@react-navigation/native';
 import { Video } from 'expo-av';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 
 const CreateCapsule = () => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const { user } = useUser();
   const { profile } = useProfile();
   const navigation = useNavigation();
@@ -276,7 +281,7 @@ const CreateCapsule = () => {
 
       console.log('📤 Sending request with FormData:', formData);
 
-      const response = await fetch('http://localhost:5000/api/capsules', {
+      const response = await fetch('${API_BASE_URL}/api/capsules', {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',

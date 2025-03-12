@@ -36,6 +36,7 @@ export default {
       EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
         process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+      API_BASE_URL: process.env.API_BASE_URL,
     },
   },
 };

@@ -15,8 +15,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useProfile } from '../../constants/ProfileContext';
 import { DateTime } from 'luxon';
+import Constants from 'expo-constants';
 
 const CapsuleTimeline = () => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const navigation = useNavigation();
 
   const { profile } = useProfile();
@@ -44,7 +49,7 @@ const CapsuleTimeline = () => {
       console.log('Fetching capsules from backend...');
 
       const response = await fetch(
-        `http://localhost:5000/api/capsules?user_id=${userId}&profile_id=${profile.id}`
+        `${API_BASE_URL}/api/capsules?user_id=${userId}&profile_id=${profile.id}`
       );
       const data = await response.json();
 

@@ -10,8 +10,13 @@ import {
 } from 'react-native';
 import { Video } from 'expo-av';
 import { supabase } from '../constants/supabaseClient';
+import Constants from 'expo-constants';
 
 const MediaBankModal = ({ isVisible, onClose, onMediaSelect, userId }) => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const [mediaBank, setMediaBank] = useState([]);
   const [isLoading, setLoading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState([]); // Store selected media
@@ -37,7 +42,7 @@ const MediaBankModal = ({ isVisible, onClose, onMediaSelect, userId }) => {
 
       // ✅ Fix: Ensure URL matches backend API
       const response = await fetch(
-        `http://localhost:5000/api/media-bank?user_id=${userId}`,
+        `${API_BASE_URL}:5000/api/media-bank?user_id=${userId}`,
         {
           method: 'GET',
           headers: {

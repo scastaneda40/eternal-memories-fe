@@ -15,8 +15,15 @@ import { Video } from 'expo-av';
 import { useRoute } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 const MemoryVault = () => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
+  console.log('🛠 API_BASE_URL:', API_BASE_URL);
+
   const [memories, setMemories] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -66,7 +73,6 @@ const MemoryVault = () => {
         setIsLoading(false);
       }
     };
-
     fetchProfiles();
   }, [userId]);
 
@@ -74,34 +80,45 @@ const MemoryVault = () => {
     if (!selectedProfile || !userId) return;
 
     const fetchMemories = async () => {
-      if (!selectedProfile || !userId) return;
+      if (!selectedProfile || !userId || !API_BASE_URL) {
+        console.error('❌ Missing required params:', {
+          selectedProfile,
+          userId,
+          API_BASE_URL,
+        });
+        return;
+      }
 
-      console.log(
-        '🔄 Fetching memories from backend for profile:',
-        selectedProfile
-      );
-      setIsLoading(true);
+      console.log(`🔍 Fetching memories for profile: ${selectedProfile}`);
 
       try {
         const response = await fetch(
-          `http://192.168.1.73:5000/api/memories?profile_id=${selectedProfile}`
+          `${API_BASE_URL}/api/memories?profile_id=${encodeURIComponent(
+            selectedProfile
+          )}`
         );
 
+        console.log('🔹 Response Status:', response.status);
+        console.log('🔹 Response Headers:', response.headers);
+
+        const responseText = await response.text(); // Capture response body
+
         if (!response.ok) {
-          throw new Error(`Error fetching memories: ${response.statusText}`);
+          throw new Error(
+            `❌ Error fetching memories: ${response.status} - ${responseText}`
+          );
         }
 
-        const data = await response.json();
-
-        console.log('✅ Memories fetched from backend:', data);
-
+        const data = JSON.parse(responseText);
+        console.log('✅ Memories fetched:', data);
         setMemories(data);
       } catch (error) {
-        console.error('❌ Unexpected error fetching memories:', error.message);
+        console.error('❌ Error fetching memories:', error.message);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchMemories();
   }, [selectedProfile, userId]);
 
@@ -192,7 +209,9 @@ const MemoryVault = () => {
                   setDropdownVisible(false);
                 }}
               >
-                <Text>{profile.name || 'Unnamed Profile'}</Text>
+                <Text style={{ fontSize: 16, color: '#333' }}>
+                  {profile.name || 'Unnamed Profile'}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
