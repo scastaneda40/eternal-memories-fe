@@ -17,7 +17,7 @@ export default {
     ios: {
       newArchEnabled: true,
       supportsTablet: true,
-      bundleIdentifier: 'com.example.eternal-moments-mobile', // Add a generic bundleIdentifier
+      bundleIdentifier: 'com.example.eternal-moments-mobile',
     },
     android: {
       newArchEnabled: true,
@@ -37,6 +37,9 @@ export default {
         process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
       API_BASE_URL: process.env.API_BASE_URL,
+      eas: {
+        projectId: 'eb2876e4-b444-4350-b82b-0f8d8250c8a8',
+      },
     },
   },
 };
