@@ -10,8 +10,13 @@ import {
 import { supabase } from '../../constants/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useUser } from '../../constants/UserContext';
+import Constants from 'expo-constants';
 
 export default function SignInScreen() {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const { setUser } = useUser();
   const router = useRouter();
 
@@ -27,6 +32,8 @@ export default function SignInScreen() {
     }));
   };
 
+  console.log('🔹 API_BASE_URL:', API_BASE_URL);
+
   const validatePassword = (password) => {
     setErrors((prev) => ({
       ...prev,
@@ -40,20 +47,56 @@ export default function SignInScreen() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailAddress,
-        password,
+      console.log('🔹 Sending sign-in request...');
+      const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailAddress, password }),
       });
 
-      if (error) {
-        console.error('❌ Supabase Sign-In Error:', error.message);
-        setErrors((prev) => ({ ...prev, password: error.message }));
-      } else {
-        setUser(data.user);
-        router.replace('/');
+      console.log('🔹 Backend sign-in response received.');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Backend sign-in error:', errorData);
+        setErrors((prev) => ({ ...prev, password: errorData.message }));
+        return;
       }
+
+      const { token, user, needsProfile } = await response.json();
+      console.log('✅ Backend auth success. Token:', token);
+
+      if (!token) {
+        console.error('❌ No token received from backend.');
+        return;
+      }
+
+      console.log('✅ Setting user:', user);
+      setUser(user);
+
+      // 🔹 Manually save session in Supabase Auth
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: token, // Use refresh_token if backend provides one
+      });
+
+      if (sessionError) {
+        console.error('❌ Failed to persist session:', sessionError.message);
+      } else {
+        console.log('✅ Session persisted successfully!');
+      }
+
+      setTimeout(() => {
+        if (needsProfile) {
+          console.log('🔄 Redirecting to profile creation...');
+          router.replace('/LovedOneProfile');
+        } else {
+          console.log('🏠 Redirecting to dashboard...');
+          router.replace('/');
+        }
+      }, 500);
     } catch (error) {
-      console.error('❌ Sign-In Error:', error.message);
+      console.error('❌ Network or server error:', error.message);
     } finally {
       setIsLoading(false);
     }
