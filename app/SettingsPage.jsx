@@ -25,6 +25,7 @@ const SettingsPage = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   const { user, setUser } = useUser();
+
   const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
     /\/$/,
     ''
@@ -33,6 +34,7 @@ const SettingsPage = () => {
     fetchUser();
   }, [user?.id, user?.avatar_url]); // 🔥 Now updates when avatar changes
 
+  console.log('avatar url being used in image', user?.avatar_url);
   const openImagePicker = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -67,7 +69,7 @@ const SettingsPage = () => {
 
       console.log('Uploading image with FormData:', formData);
 
-      const res = await fetch('${API_BASE_URL}/api/avatar-upload', {
+      const res = await fetch(`${API_BASE_URL}/api/avatar-upload`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -93,6 +95,7 @@ const SettingsPage = () => {
         // ✅ Update state with the new avatar URL
         setUser((prevUser) => ({
           ...prevUser,
+          name: data.name, // Ensure the name is updated in state
           avatar_url: data.avatarUrl,
         }));
 
@@ -133,7 +136,11 @@ const SettingsPage = () => {
 
     setUser((prevUser) => ({
       ...prevUser,
-      avatar_url: data.avatar_url,
+      user_metadata: {
+        ...prevUser.user_metadata, // Preserve other metadata
+        name: data.name, // Store name in user_metadata for UI access
+      },
+      avatar_url: data.avatar_url, // Keep updating the avatar URL
     }));
   };
 
@@ -145,10 +152,21 @@ const SettingsPage = () => {
       if (error) throw error;
 
       console.log('✅ User successfully logged out.');
+
+      // Clear user state
+      setUser(null);
+
+      // Reset navigation stack and navigate to sign-in screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'sign-in/index' }], // ✅ Use the exact screen name
+      });
     } catch (error) {
       console.error('❌ Logout failed:', error.message);
     }
   };
+
+  console.log('User in state:', user);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -157,7 +175,7 @@ const SettingsPage = () => {
       <View style={styles.profileSection}>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Image
-            key={user?.avatar_url} // Forces React to reload image when URL changes
+            key={user?.avatar_url}
             source={{
               uri: user?.avatar_url
                 ? `${user.avatar_url}?timestamp=${new Date().getTime()}`
@@ -165,12 +183,12 @@ const SettingsPage = () => {
             }}
             style={styles.profileImage}
             onLoad={() => console.log('✅ Avatar loaded successfully!')}
-            onError={(e) =>
-              console.error('❌ Error loading avatar', e.nativeEvent)
-            }
           />
         </TouchableOpacity>
-        <Text style={styles.profileName}>{user?.name || 'Your Name'}</Text>
+        <Text style={styles.profileName}>
+          {' '}
+          {user?.user_metadata?.name || 'Your Name'}
+        </Text>
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.pencilIcon}

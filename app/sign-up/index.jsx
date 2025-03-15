@@ -9,8 +9,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../constants/supabaseClient';
+import Constants from 'expo-constants';
 
 export default function SignUpScreen() {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = useState('');
@@ -38,19 +43,42 @@ export default function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: emailAddress,
-        password: password,
+      console.log('🔹 Sending sign-up request to backend...');
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailAddress,
+          password,
+        }),
       });
 
-      if (error) {
-        console.error('❌ Supabase Sign-Up Error:', error.message);
-      } else {
-        console.log('✅ Supabase Sign-Up Success:', data);
-        router.replace('/'); // Redirect user after sign-up
+      console.log('🔹 Raw response received:', response);
+
+      // Check if the response is valid JSON
+      const text = await response.text(); // Read raw response text
+      console.log('🔹 Raw response text:', text);
+
+      // Attempt to parse it as JSON
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonError) {
+        console.error('❌ JSON Parse Error:', jsonError);
+        console.error('💡 Response received:', text);
+        return;
       }
+
+      if (!response.ok) {
+        console.error('❌ Backend sign-up error:', data);
+        return;
+      }
+
+      console.log('✅ Backend sign-up success:', data.message);
+      alert('Check your email for a confirmation link!');
+      router.replace('/');
     } catch (error) {
-      console.error('❌ Sign-Up Error:', error.message);
+      console.error('❌ Network error during sign-up:', error.message);
     } finally {
       setIsLoading(false);
     }

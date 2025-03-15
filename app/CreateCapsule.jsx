@@ -281,7 +281,7 @@ const CreateCapsule = () => {
 
       console.log('📤 Sending request with FormData:', formData);
 
-      const response = await fetch('${API_BASE_URL}/api/capsules', {
+      const response = await fetch(`${API_BASE_URL}/api/capsules`, {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',

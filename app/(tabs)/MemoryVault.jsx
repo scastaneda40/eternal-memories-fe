@@ -34,6 +34,12 @@ const MemoryVault = () => {
 
   const navigation = useNavigation();
 
+  useEffect(() => {
+    console.log('🔍 Profiles:', profiles);
+    console.log('🔍 Selected Profile:', selectedProfile);
+    console.log('🔍 Memories:', memories);
+  }, [profiles, selectedProfile, memories]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: '', // Remove title to prevent extra space

@@ -23,18 +23,16 @@ const Dashboard = () => {
   const navigation = useNavigation();
   const [highlightedMemory, setHighlightedMemory] = useState(null);
   const [avatar, setAvatar] = useState(null);
-  const insets = useSafeAreaInsets();
 
   const { profile, setProfile } = useProfile();
   const { user } = useUser();
 
-  const { width, height } = Dimensions.get('window');
+  const screenHeight = Dimensions.get('window').height;
 
-  useEffect(() => {
-    if (profile?.avatar_url) {
-      setAvatar(`${profile.avatar_url}?timestamp=${new Date().getTime()}`);
-    }
-  }, [profile?.avatar_url]);
+  const dynamicTileStyle = {
+    width: '100%',
+    height: screenHeight * 0.12, // ✅ Fix: This must be applied dynamically in JSX
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -200,7 +198,7 @@ const Dashboard = () => {
         {/* Action Tiles */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity
-            style={styles.actionTile}
+            style={[styles.actionTile, dynamicTileStyle]} // ✅ Apply dynamic style here
             onPress={() => navigation.navigate('MemoryUpload')}
           >
             <Ionicons
@@ -213,7 +211,7 @@ const Dashboard = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionTile}
+            style={[styles.actionTile, dynamicTileStyle]} // ✅ Apply dynamic style here
             onPress={() => navigation.navigate('LovedOneProfile')}
           >
             <Ionicons
@@ -226,7 +224,7 @@ const Dashboard = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionTile}
+            style={[styles.actionTile, dynamicTileStyle]} // ✅ Apply dynamic style here
             onPress={() => navigation.navigate('MediaGallery')}
           >
             <Ionicons
@@ -239,7 +237,7 @@ const Dashboard = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionTile}
+            style={[styles.actionTile, dynamicTileStyle]} // ✅ Apply dynamic style here
             onPress={() => navigation.navigate('CreateCapsule')}
           >
             <Ionicons
@@ -322,30 +320,27 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   actionsContainer: {
-    flexDirection: 'column', // Arrange tiles in a single column
-    alignItems: 'center', // Center align tiles horizontally
-    paddingHorizontal: '5%', // Add some padding on the sides
-    paddingBottom: '5%', // Reduce space at the bottom
-    marginBottom: 0, // Ensure no extra margin at the bottom
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingHorizontal: '5%',
+    paddingBottom: '5%',
+    marginBottom: 0,
   },
   actionTile: {
-    width: '100%', // Full width for consistent alignment
-    height: 95, // Fixed height for consistent appearance
-    borderRadius: 12, // Rounded corners
-    backgroundColor: '#F9F9F9', // Light background color
-    marginBottom: 15, // Fixed vertical spacing between tiles
-    marginHorizontal: 0, // No additional horizontal margin since width is 100%
-    alignItems: 'center', // Center content horizontally
-    justifyContent: 'center', // Center content vertically
-    shadowColor: '#000', // Shadow for subtle elevation
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: '#F9F9F9',
+    marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2, // Shadow for Android
-    borderWidth: 1, // Optional border
-    borderColor: '#E6E6E6', // Light gray border
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E6E6E6',
   },
-
   tileIcon: {
     marginBottom: 10, // Space between icon and text
   },

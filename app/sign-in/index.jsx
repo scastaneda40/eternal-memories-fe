@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   TextInput,
@@ -10,8 +10,13 @@ import {
 import { supabase } from '../../constants/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useUser } from '../../constants/UserContext';
+import Constants from 'expo-constants';
 
 export default function SignInScreen() {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   const { setUser } = useUser();
   const router = useRouter();
 
@@ -27,6 +32,8 @@ export default function SignInScreen() {
     }));
   };
 
+  console.log('🔹 API_BASE_URL:', API_BASE_URL);
+
   const validatePassword = (password) => {
     setErrors((prev) => ({
       ...prev,
@@ -35,25 +42,80 @@ export default function SignInScreen() {
     }));
   };
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData?.user) {
+        console.log('✅ User already signed in:', sessionData.user);
+        setUser(sessionData.user);
+        // Redirect to the next screen, like dashboard or profile
+        router.replace('/dashboard'); // Or /LovedOneProfile
+      }
+    };
+
+    checkSession();
+  }, []);
+
   const onSignInPress = async () => {
     if (errors.email || errors.password || isLoading) return;
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailAddress,
-        password,
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData?.user) {
+        console.log('✅ User already logged in:', sessionData.user);
+        setUser(sessionData.user);
+        router.replace('/dashboard'); // Or /LovedOneProfile
+        return;
+      }
+
+      // Continue with the sign-in process if no session found
+      const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailAddress, password }),
       });
 
-      if (error) {
-        console.error('❌ Supabase Sign-In Error:', error.message);
-        setErrors((prev) => ({ ...prev, password: error.message }));
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Backend sign-in error:', errorData);
+        setErrors((prev) => ({ ...prev, password: errorData.message }));
+        return;
+      }
+
+      const { token, user, needsProfile } = await response.json();
+      console.log('✅ Backend auth success. Token:', token);
+
+      if (!token) {
+        console.error('❌ No token received from backend.');
+        return;
+      }
+
+      // Set the session with Supabase Auth
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: token, // If the backend provides it, use the refresh token
+      });
+
+      if (sessionError) {
+        console.error('❌ Failed to persist session:', sessionError.message);
       } else {
-        setUser(data.user);
-        router.replace('/');
+        console.log('✅ Session persisted successfully!');
+      }
+
+      setUser(user); // Set the user after the session is established
+
+      if (needsProfile) {
+        console.log('🔄 Redirecting to profile creation...');
+        router.replace('/LovedOneProfile');
+      } else {
+        console.log('🏠 Redirecting to dashboard...');
+        router.replace('/dashboard');
       }
     } catch (error) {
-      console.error('❌ Sign-In Error:', error.message);
+      console.error('❌ Network or server error:', error.message);
     } finally {
       setIsLoading(false);
     }
