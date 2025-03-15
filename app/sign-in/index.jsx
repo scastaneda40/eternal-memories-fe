@@ -67,7 +67,7 @@ export default function SignInScreen() {
       if (sessionData?.user) {
         console.log('✅ User already logged in:', sessionData.user);
         setUser(sessionData.user);
-        router.replace('/dashboard'); // Or /LovedOneProfile
+        router.replace('/'); // Or /LovedOneProfile
         return;
       }
 
@@ -112,7 +112,7 @@ export default function SignInScreen() {
         router.replace('/LovedOneProfile');
       } else {
         console.log('🏠 Redirecting to dashboard...');
-        router.replace('/dashboard');
+        router.replace('/');
       }
     } catch (error) {
       console.error('❌ Network or server error:', error.message);
