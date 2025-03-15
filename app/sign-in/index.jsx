@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   TextInput,
@@ -42,19 +42,41 @@ export default function SignInScreen() {
     }));
   };
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData?.user) {
+        console.log('✅ User already signed in:', sessionData.user);
+        setUser(sessionData.user);
+        // Redirect to the next screen, like dashboard or profile
+        router.replace('/dashboard'); // Or /LovedOneProfile
+      }
+    };
+
+    checkSession();
+  }, []);
+
   const onSignInPress = async () => {
     if (errors.email || errors.password || isLoading) return;
     setIsLoading(true);
 
     try {
-      console.log('🔹 Sending sign-in request...');
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData?.user) {
+        console.log('✅ User already logged in:', sessionData.user);
+        setUser(sessionData.user);
+        router.replace('/dashboard'); // Or /LovedOneProfile
+        return;
+      }
+
+      // Continue with the sign-in process if no session found
       const response = await fetch(`${API_BASE_URL}/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailAddress, password }),
       });
-
-      console.log('🔹 Backend sign-in response received.');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -71,13 +93,10 @@ export default function SignInScreen() {
         return;
       }
 
-      console.log('✅ Setting user:', user);
-      setUser(user);
-
-      // 🔹 Manually save session in Supabase Auth
+      // Set the session with Supabase Auth
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: token,
-        refresh_token: token, // Use refresh_token if backend provides one
+        refresh_token: token, // If the backend provides it, use the refresh token
       });
 
       if (sessionError) {
@@ -86,15 +105,15 @@ export default function SignInScreen() {
         console.log('✅ Session persisted successfully!');
       }
 
-      setTimeout(() => {
-        if (needsProfile) {
-          console.log('🔄 Redirecting to profile creation...');
-          router.replace('/LovedOneProfile');
-        } else {
-          console.log('🏠 Redirecting to dashboard...');
-          router.replace('/');
-        }
-      }, 500);
+      setUser(user); // Set the user after the session is established
+
+      if (needsProfile) {
+        console.log('🔄 Redirecting to profile creation...');
+        router.replace('/LovedOneProfile');
+      } else {
+        console.log('🏠 Redirecting to dashboard...');
+        router.replace('/dashboard');
+      }
     } catch (error) {
       console.error('❌ Network or server error:', error.message);
     } finally {
