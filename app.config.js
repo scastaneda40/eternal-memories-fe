@@ -17,9 +17,10 @@ export default {
     ios: {
       newArchEnabled: true,
       supportsTablet: true,
-      bundleIdentifier: 'com.example.eternal-moments-mobile',
+      bundleIdentifier: 'com.scastaneda.eternalmomentsbeta',
     },
     android: {
+      package: 'com.example.eternalmomentsmobile',
       newArchEnabled: true,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',

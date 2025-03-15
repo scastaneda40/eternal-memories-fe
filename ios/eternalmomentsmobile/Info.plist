@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>myapp</string>
-          <string>com.scastaneda.eternalmomentsbeta</string>
+          <string>com.example.eternal-moments-mobile</string>
         </array>
       </dict>
     </array>
