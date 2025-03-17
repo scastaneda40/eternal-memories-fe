@@ -32,6 +32,11 @@ const GOOGLE_MAPS_API_KEY = Constants.expoConfig.extra.GOOGLE_MAPS_API_KEY;
 Geocoder.init(GOOGLE_MAPS_API_KEY);
 
 const MemoryUpload = () => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: '', // Removes the title
@@ -294,6 +299,8 @@ const MemoryUpload = () => {
     }
 
     try {
+      setLoading(true); // ✅ Set loading state
+
       const formData = new FormData();
       formData.append('user_id', user.id);
       formData.append('profile_id', selectedProfile);
@@ -310,7 +317,6 @@ const MemoryUpload = () => {
         })
       );
 
-      // Add media files to FormData
       media.forEach((item, index) => {
         const fileName = item.uri.split('/').pop();
         const fileType = fileName.split('.').pop();
@@ -321,7 +327,7 @@ const MemoryUpload = () => {
         });
       });
 
-      const response = await fetch('http://192.168.1.73:5000/upload', {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -329,21 +335,19 @@ const MemoryUpload = () => {
 
       if (!response.ok) throw new Error('Failed to upload memory');
 
-      // Show success notification
       Toast.show({
         type: 'success',
         text1: 'Memory Uploaded!',
         text2: 'You can now add another memory.',
       });
 
-      // Clear form fields
       setTitle('');
       setTags('');
       setDescription('');
       setManualAddress('');
       setMedia([]);
       setDate(new Date());
-      setMarker({ latitude: 37.7749, longitude: -122.4194 }); // Reset marker to default
+      setMarker({ latitude: 37.7749, longitude: -122.4194 });
       setRegion({
         latitude: 37.7749,
         longitude: -122.4194,
@@ -357,6 +361,8 @@ const MemoryUpload = () => {
         text1: 'Upload Failed',
         text2: error.message,
       });
+    } finally {
+      setLoading(false); // ✅ Reset loading state
     }
   };
 
@@ -711,10 +717,18 @@ const MemoryUpload = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.button, styles.primaryButton, styles.uploadButton]}
+          style={[
+            styles.button,
+            styles.primaryButton,
+            styles.uploadButton,
+            isLoading && { backgroundColor: '#ccc' }, // Disable color change
+          ]}
           onPress={handleUpload}
+          disabled={isLoading} // Disable button while loading
         >
-          <Text style={styles.buttonText}>Upload Memory</Text>
+          <Text style={styles.buttonText}>
+            {isLoading ? 'Uploading...' : 'Upload Memory'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>

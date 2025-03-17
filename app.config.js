@@ -14,11 +14,14 @@ export default {
       resizeMode: 'contain',
       backgroundColor: '#ffffff',
     },
+    plugins: ['expo-router'], // ✅ Correct placement of plugins
+
     ios: {
       newArchEnabled: true,
       supportsTablet: true,
       bundleIdentifier: 'com.scastaneda.eternalmomentsbeta',
     },
+
     android: {
       package: 'com.example.eternalmomentsmobile',
       newArchEnabled: true,
@@ -27,9 +30,11 @@ export default {
         backgroundColor: '#ffffff',
       },
     },
+
     web: {
       favicon: './assets/images/favicon.png',
     },
+
     extra: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,

@@ -30,6 +30,10 @@ import Constants from 'expo-constants';
 const { width } = Dimensions.get('window');
 
 const MemoryDetail = () => {
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL?.replace(
+    /\/$/,
+    ''
+  );
   useLayoutEffect(() => {
     navigation.setOptions({ headerTitle: '' }); // ✅ Hides the screen title
   }, [navigation]);
@@ -405,25 +409,22 @@ const MemoryDetail = () => {
         address: editedMemory.location?.address, // ✅ Ensure address is sent separately
       });
 
-      const response = await fetch(
-        'http://localhost:5000/api/memories/update',
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${userToken}`,
-          },
-          body: JSON.stringify({
-            id: editedMemory.id,
-            title: editedMemory.title,
-            actual_date: editedMemory.actual_date,
-            description: editedMemory.description,
-            location: formattedLocation, // ✅ Fixed GeoJSON format
-            address: editedMemory.location?.address, // ✅ Send address separately
-            file_urls: editedMemory.file_urls || [], // ✅ Send file URLs (even empty)
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/memories/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          id: editedMemory.id,
+          title: editedMemory.title,
+          actual_date: editedMemory.actual_date,
+          description: editedMemory.description,
+          location: formattedLocation, // ✅ Fixed GeoJSON format
+          address: editedMemory.location?.address, // ✅ Send address separately
+          file_urls: editedMemory.file_urls || [], // ✅ Send file URLs (even empty)
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
